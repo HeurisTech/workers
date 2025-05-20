@@ -1,0 +1,126 @@
+{
+    "messages": [
+        {
+            "content": "You are an expert function‐calling assistant.  \n\nHARD RULES (apply to every function):\n- Never output any placeholder values (no \"<…>\", \"[insert…]\", \"your_…\", etc.).  \n- If any required argument is missing or still a placeholder → DO NOT call the function.  \n  – Instead ask: \"I need your <argument_name> to proceed, could you please provide it?\"  \n- Only once you have REAL values for EVERY required argument, output a JSON function call in the tool_calls section.\n\nSTEP-BY-STEP:\n1. Validate required args.  \n2. If missing → ask user.  \n3. If all present → call function.\n\nExample 1 (missing user_id):\n  User: \"Get my personal information\"  \n  Assistant: \"I need your user_id to proceed, could you please provide it?\"\n\nExample 2 (all info present):\n  User: \"Get my personal information; my user_id is 987828\"\n  Assistant (tool_calls):\n  {\n    \"name\": \"user_info\",\n    \"parameters\": {\n      \"user_id\": \"982878\"\n    }\n  }\n\nExample 3 (missing user_id):\n  User: \"Fetch user transaction history\"\n  Assistant: \"I need your user_id to proceed, could you please provide it?\"\n\nExample 4 (all info present):\n  User: \"Fetch user (id: 12345) trasaction history\"\n  Assistant (tool_calls):\n  {\n    \"name\": \"user_transactions\",\n    \"parameters\": {\n      \"user_id\": \"12345\"\n    }\n  }\n\nExample 5 (misleading but missing user_id):\n  User: \"Can you fetch transactions?\"\n  Assistant: \"I need your user_id to proceed, could you please provide it?\"",
+            "role": "system"
+        },
+        {
+            "content": "Get details of my latest claim.",
+            "role": "user"
+        }
+    ],
+    "model": "llama-4-scout-17b-16e-instruct",
+    "temperature": 0.7,
+    "tools": [
+        {
+            "type": "function",
+            "function": {
+                "name": "query_claims",
+                "description": "Retrieve claims for a member with optional filtering.",
+                "parameters": {
+                    "properties": {
+                        "member_id": {
+                            "title": "Member Id",
+                            "type": "string"
+                        },
+                        "claim_status": {
+                            "default": "ALL",
+                            "title": "Claim Status",
+                            "type": "string"
+                        },
+                        "field_name_to_filter_by": {
+                            "default": "None",
+                            "title": "Field Name To Filter By",
+                            "type": "string"
+                        },
+                        "field_value_to_filter_by": {
+                            "default": "None",
+                            "title": "Field Value To Filter By",
+                            "type": "string"
+                        },
+                        "number_claims_required": {
+                            "default": 10,
+                            "title": "Number Claims Required",
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "member_id"
+                    ],
+                    "title": "query_claimsArguments",
+                    "type": "object"
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_claims_by_date_range",
+                "description": "Retrieve claims for a member within a specific date range.",
+                "parameters": {
+                    "properties": {
+                        "member_id": {
+                            "title": "Member Id",
+                            "type": "string"
+                        },
+                        "start_date_range": {
+                            "title": "Start Date Range",
+                            "type": "string"
+                        },
+                        "end_date_range": {
+                            "title": "End Date Range",
+                            "type": "string"
+                        },
+                        "claim_status": {
+                            "default": "ALL",
+                            "title": "Claim Status",
+                            "type": "string"
+                        },
+                        "field_name_to_filter_by": {
+                            "default": "None",
+                            "title": "Field Name To Filter By",
+                            "type": "string"
+                        },
+                        "field_value_to_filter_by": {
+                            "default": "None",
+                            "title": "Field Value To Filter By",
+                            "type": "string"
+                        },
+                        "number_claims_required": {
+                            "default": 10,
+                            "title": "Number Claims Required",
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "member_id",
+                        "start_date_range",
+                        "end_date_range"
+                    ],
+                    "title": "query_claims_by_date_rangeArguments",
+                    "type": "object"
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_member_coverage",
+                "description": "Retrieve coverage information for a member and their dependents.",
+                "parameters": {
+                    "properties": {
+                        "member_id": {
+                            "title": "Member Id",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "member_id"
+                    ],
+                    "title": "get_member_coverageArguments",
+                    "type": "object"
+                }
+            }
+        }
+    ]
+}

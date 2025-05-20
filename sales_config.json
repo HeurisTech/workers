@@ -1,0 +1,11 @@
+{
+    "playwright-mcp": {
+        "transport": "stdio",
+        "description": "Browser automation. Navigation, scraping, etc. using playright",
+        "command": "npx",
+        "args": [
+            "@playwright/mcp@latest",
+            "--headless"
+        ]
+    }
+}

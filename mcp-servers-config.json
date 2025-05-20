@@ -1,0 +1,54 @@
+{
+    "weather": {
+        "transport": "stdio",
+        "command": "uv",
+        "description": "Get weather forecasts",
+        "args": [
+            "--directory",
+            "/Users/heuris/fun/weather_service",
+            "run",
+            "weather-service"
+        ],
+        "env": {
+            "OPENWEATHER_API_KEY": "YOUR.OPENWEATHER.API.KEY"
+        }
+    },
+    "sqlite": {
+        "transport": "stdio",
+        "command": "uvx",
+        "description": "Database operations with SQLite, e.g., describe, create, and query tables.",
+        "args": [
+            "mcp-server-sqlite",
+            "--db-path",
+            "test.db"
+        ]
+    },
+    "filesystem": {
+        "transport": "stdio",
+        "command": "npx",
+        "description": "Filesystem operations on your files, e.g., search, copy, move, and delete files.",
+        "args": [
+            "-y",
+            "@modelcontextprotocol/server-filesystem",
+            "YOUR.FILESYSTEM.PATH.THAT.YOU.GRANT.ACCESS.TO.THIS.SERVER"
+        ]
+    },
+    "gmail": {
+        "transport": "streamable_http",
+        "env": {
+            "CLIENT_ID": "YOUR.GOOGLE.CLIENT.ID",
+            "CLIENT_SECRET": "YOUR.GOOGLE.CLIENT.SECRET",
+            "REFRESH_TOKEN": "YOUR.GOOGLE.REFRESH.TOKEN"
+        },
+        "url": "https://server.smithery.ai/@HeurisTech/gmail-mcp-server/mcp",
+        "description": "Provides tools for common operations with Gmail (e.g., send_mail)"
+    },
+    "contract_manufacturers": {
+        "transport": "streamable_http",
+        "env": {
+            "OPENAI_API_KEY": "YOUR.OPENAI.API.KEY"
+        },
+        "url": "https://server.smithery.ai/@esxr/contract_manufacturers_mcp/mcp",
+        "description": "list or get the requirements for manufacturers for various products"
+    }
+}

@@ -1,0 +1,35 @@
+[project]
+name = "langgraph-mcp"
+version = "1.0.0"
+description = "LangGraph Solution Template for MCP"
+authors = [
+    { name = "Heuris Labs", email = "hello@heuris.co" },
+]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "sse-starlette>=2.1.0,<2.2.0",
+    "asyncio",
+    "langchain",
+    "langchain-core",
+    "langchain-openai",
+    "langchain-ollama",
+    "langgraph",
+    "mcp[cli]",
+    "openai",
+    "python-dotenv",
+    "smithery"
+]
+
+[project.optional-dependencies]
+dev = ["debugpy", "mypy", "ruff"]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["langgraph_mcp"]
+[tool.setuptools.package-dir]
+"langgraph_mcp" = "src/langgraph_mcp"
