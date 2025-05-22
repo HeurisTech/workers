@@ -5,16 +5,14 @@
   "dependencies": [
     "."
   ],
+  "dockerfile_lines": [
+    "RUN apt-get update && apt-get install -y curl",
+    "RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs",
+    "RUN npm install -g playwright",
+    "RUN playwright install --with-deps chromium"
+  ],
   "graphs": {
     "assist_with_planner": "./src/langgraph_mcp/with_planner/graph.py:graph"
   },
-  "env": ".env",
-  "dockerfile_lines": [
-    "RUN apt-get update && apt-get install -y curl gnupg",
-    "RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -",
-    "RUN apt-get install -y nodejs",
-    "RUN npm install -g npm@latest",
-    "RUN npm install -g playwright",
-    "RUN npx playwright install"
-  ]
+  "env": ".env"
 }

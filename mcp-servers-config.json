@@ -50,5 +50,18 @@
         },
         "url": "https://server.smithery.ai/@esxr/contract_manufacturers_mcp/mcp",
         "description": "list or get the requirements for manufacturers for various products"
+    },
+    "playwright": {
+        "command": "npx",
+        "args": [
+          "@playwright/mcp@latest",
+          "--no-sandbox",
+          "--headless",
+          "--executablePath",
+          "/root/.cache/ms-playwright/chromium-1169/chrome-linux/chrome",
+          "--config",
+          "/deps/langgraph-mcp/playwright/config.json"
+        ],
+        "description": "Use for browser based interaction or automation tasks"
     }
 }
