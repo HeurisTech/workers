@@ -16,7 +16,8 @@ The core idea is to implement a multi-agent pattern where an assistant routes us
 ## Directory Structure
 
 -   `src/langgraph_mcp/`: Contains the core source code.
-    -   `with_planner/`: Implementation strategy using a planner agent.
+    -   `with_planner/`: Old planner agent implementation strategy.
+    -   `planner_style/`: New planner style agent implementation strategy. Accomodates MCP servers that require their session to last multiple executions of the agent graph
     -   `state.py`: Defines the common state shared across graphs.
     -   `utils.py`: Common utility functions (e.g., loading models).
     -   `mcp_wrapper.py`: Handles interaction with MCP servers.

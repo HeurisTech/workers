@@ -11,7 +11,8 @@ This document details how LangGraph is configured and integrated into the projec
     "python_version": "3.12",
     "dependencies": ["."],
     "graphs": {
-      "assist_with_planner": "./src/langgraph_mcp/with_planner/graph.py:graph"
+      "assist_with_planner": "./src/langgraph_mcp/with_planner/graph.py:graph",
+      "planner_style_agent": "./src/langgraph_mcp/planner_style/graph.py:graph"
     },
     "env": ".env"
 }

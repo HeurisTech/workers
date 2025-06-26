@@ -46,11 +46,22 @@ This documentation provides details necessary for Large Language Models (LLMs) a
 3. Install the dependencies
 
     ```bash
+    source .venv/bin/activate
     pip install -e .
+    pip install -e ".[dev]"
+    pip install -e ".[test]"
     ```
 
 4. Configure environment variables
 
     ```bash
     cp env.example .env
+    ```
+
+5. Run tests
+
+    ```bash
+    source .venv/bin/activate
+    pytest tests/test_assistant_with_planner.py
+    pytest tests/test_planner_style_agent.py
     ```

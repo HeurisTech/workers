@@ -13,7 +13,8 @@
   ],
   "graphs": {
     "assist_with_planner": "./src/langgraph_mcp/with_planner/graph.py:graph",
-    "assist_with_playwright": "./src/langgraph_mcp/playwright_react_graph.py:make_graph"
+    "assist_with_playwright": "./src/langgraph_mcp/playwright_react_graph.py:make_graph",
+    "planner_style_agent": "./src/langgraph_mcp/planner_style/graph.py:graph"
   },
   "env": ".env"
 }
