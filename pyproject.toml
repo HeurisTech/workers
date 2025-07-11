@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["debugpy", "mypy", "ruff"]
+dev = ["debugpy", "mypy", "ruff", "langgraph-cli[inmem]"]
 test = ["pytest", "langgraph-sdk", "requests"]
 
 [build-system]

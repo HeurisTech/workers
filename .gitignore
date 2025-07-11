@@ -10,3 +10,4 @@ milvus.db
 .credentials.json
 tmp/
 .mcp-servers-config_smithery_only.json
+uv.lock
