@@ -30,7 +30,7 @@
         "args": [
             "-y",
             "@modelcontextprotocol/server-filesystem",
-            "YOUR.FILESYSTEM.PATH.THAT.YOU.GRANT.ACCESS.TO.THIS.SERVER"
+            "/Users/praneetdhoolia/work/workers/playground"
         ]
     },
     "gmail": {
@@ -63,5 +63,8 @@
           "/deps/langgraph-mcp/playwright/config.json"
         ],
         "description": "Use for browser based interaction or automation tasks"
+    },
+    "shell": {
+        "description": "Execute shell commands, create files and directories, and perform local system operations using custom tools"
     }
 }
