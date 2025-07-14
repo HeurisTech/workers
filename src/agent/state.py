@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import base64
 from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Sequence, Annotated
 from enum import Enum
 from dataclasses import dataclass, field
 
-from langgraph.graph import MessagesState
+from langgraph.graph import MessagesState, add_messages
+from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, Field, validator, root_validator
 
 __all__ = [
@@ -157,7 +158,7 @@ class ExecutionState(BaseModel):
     
     # Screenshots and messages (for context)
     screenshots: List[str] = Field(default_factory=list)
-    messages: List[dict] = Field(default_factory=list)
+    messages: Annotated[Sequence[AnyMessage], add_messages] = Field(default_factory=list)
     
     # Legacy fields for backward compatibility (can be removed later)
     execution_plan: List[dict] = Field(default_factory=list)
@@ -298,7 +299,7 @@ class ExecutionState(BaseModel):
 
 class GraphInput(BaseModel):
     """Input schema for the graph."""
-    user_request: str
+    messages: Annotated[Sequence[AnyMessage], add_messages]
 
 
 class OutputState(BaseModel):

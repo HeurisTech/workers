@@ -137,30 +137,55 @@ async def setup_sandbox(state: ExecutionState, *, config: RunnableConfig) -> Exe
         # Reset the flag
         set_state_field(state, "needs_new_sandbox", False)
     
-    # Extract user request from the config
+    # Extract user request from the messages array (compatible with planner_style_agent schema)
     user_request = ""
     
-    # First, check if we have a direct user_request in the state (from GraphInput)
-    if hasattr(state, 'user_request') and state.user_request:
+    # First, check if we have messages in the state (from GraphInput)
+    if hasattr(state, 'messages') and state.messages:
+        # Extract the last user message from the messages array
+        for message in reversed(state.messages):
+            if hasattr(message, 'type') and message.type == 'human':
+                user_request = message.content
+                break
+            elif hasattr(message, 'role') and message.role == 'user':
+                user_request = message.content
+                break
+            elif isinstance(message, dict) and message.get('role') == 'user':
+                user_request = message.get('content', '')
+                break
+    
+    # Fallback: check if we have a direct user_request in the state (backward compatibility)
+    if not user_request and hasattr(state, 'user_request') and state.user_request:
         user_request = state.user_request
-    # Try different ways to get the user request from config
-    elif "user_request" in configurable:
+    # Try different ways to get the user request from config (backward compatibility)
+    elif not user_request and "user_request" in configurable:
         user_request = configurable["user_request"]
-    elif "input" in configurable:
+    elif not user_request and "input" in configurable:
         user_request = configurable["input"]
-    elif "query" in configurable:
+    elif not user_request and "query" in configurable:
         user_request = configurable["query"]
-    elif "message" in configurable:
+    elif not user_request and "message" in configurable:
         user_request = configurable["message"]
-    else:
-        # If no user request found, use a default
+    
+    # If no user request found, use a default
+    if not user_request:
         user_request = "Open Chrome and search for information"
     
     # Handle both dict and object state
     if isinstance(state, dict):
         state["user_request"] = user_request
+        # Also preserve messages if they exist
+        if hasattr(state, 'messages'):
+            state["messages"] = getattr(state, 'messages', [])
     else:
         state.user_request = user_request
+        # Also preserve messages if they exist in the input
+        if not hasattr(state, 'messages') or not state.messages:
+            # Try to get messages from the original state if available
+            if hasattr(state, 'messages'):
+                pass  # Already has messages
+            else:
+                state.messages = []
     
     # Check if we have existing sandbox info in the config or state
     if isinstance(state, dict):

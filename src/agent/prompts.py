@@ -84,6 +84,7 @@ executor_system_prompt = textwrap.dedent(
     - Focus on the specific task given, not related or interesting content
     - Use precise clicks and typing - avoid unnecessary interactions
     - If the task appears complete based on the screenshot, respond with "TASK_COMPLETE"
+    - always ask to type in the search bar on top rather than google search bar
     
     Available actions (use EXACT format):
     - click: {"type": "click", "x": 100, "y": 200}
