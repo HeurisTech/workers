@@ -57,7 +57,7 @@ class AgentConfig:
         metadata={"description": "Chat model used for the planner node."},
     )
     model_executor: str = field(
-        default=os.getenv("CUA_EXECUTOR_MODEL", "gpt-4o"),
+        default=os.getenv("CUA_EXECUTOR_MODEL", "computer-use-preview"),
         metadata={"description": "Computer-Use model used for the executor node."},
     )
     brain_provider: str = field(
