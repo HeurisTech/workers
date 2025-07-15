@@ -4,90 +4,248 @@ from __future__ import annotations
 
 from typing import List, Tuple, Optional
 from agent.state import ActionType, SemanticInstruction
+import time
 
 
 def execute_semantic_instruction(desktop, instruction: SemanticInstruction) -> Tuple[Optional[str], Optional[str], Optional[str], List[str]]:
-    """
-    Execute a semantic instruction using the desktop interface.
+    """Execute a semantic instruction on the desktop."""
     
-    Returns:
-        Tuple of (action_performed, action_result, error, elements_found)
-    """
     action_performed = None
     action_result = None
     error = None
     elements_found = []
     
-    try:
-        if instruction.action_type == ActionType.screenshot:
-            # Just take screenshot - no other action needed
-            action_performed = "screenshot"
-            action_result = "Screenshot taken"
+    import time
+    
+    def wait_for_page_ready(seconds=3):
+        """Wait for page to be ready with visual feedback."""
+        print(f"Waiting {seconds} seconds for page to be ready...")
+        time.sleep(seconds)
+        print("Page should be ready now.")
+    
+    # Type text action
+    if instruction.action_type == ActionType.type_text:
+        if instruction.text_content:
+            try:
+                # Wait a bit to ensure any previous actions have completed
+                wait_for_page_ready(1)
+                
+                print(f"Attempting to type: '{instruction.text_content}'")
+                
+                # Use the new API for typing text
+                if hasattr(desktop, "write"):
+                    desktop.write(instruction.text_content)
+                    action_performed = f"type_text: {instruction.text_content}"
+                    action_result = f"Successfully typed: '{instruction.text_content}'"
+                    print(f"Successfully typed: '{instruction.text_content}'")
+                elif hasattr(desktop, "type"):
+                    desktop.type(instruction.text_content)
+                    action_performed = f"type_text: {instruction.text_content}"
+                    action_result = f"Successfully typed: '{instruction.text_content}'"
+                    print(f"Successfully typed: '{instruction.text_content}'")
+                else:
+                    error = "No typing method available on desktop"
+                    print(f"Typing error: {error}")
+                    
+            except Exception as e:
+                error = f"Typing failed: {str(e)}"
+                print(f"Typing error: {e}")
+        else:
+            error = "No text content provided for type_text action"
             
-        elif instruction.action_type == ActionType.click_element:
-            if instruction.target_element:
-                # This case is now handled by the OpenAI Computer Use model in the executor
-                # for visual analysis and precise coordinate detection
-                action_performed = f"click_element: {instruction.target_element}"
-                action_result = f"Attempted to click on element: {instruction.target_element}"
-                elements_found = [instruction.target_element]
-            else:
-                error = "No target element specified for click_element action"
+    # Key press action
+    elif instruction.action_type == ActionType.press_key:
+        if instruction.key_sequence:
+            try:
+                pressed_keys = []
+                error = None
                 
-        elif instruction.action_type == ActionType.type_text:
-            if instruction.text_content:
-                desktop.write(instruction.text_content)
-                action_performed = f"type_text: {instruction.text_content}"
-                action_result = f"Typed: {instruction.text_content}"
-                print(f"Typed: {instruction.text_content}")
-            else:
-                error = "No text content provided for type_text action"
-                
-        elif instruction.action_type == ActionType.press_key:
-            if instruction.key_sequence:
                 for key in instruction.key_sequence:
-                    desktop.press(key.lower())
-                    print(f"Pressed key: {key}")
-                action_performed = f"press_key: {instruction.key_sequence}"
-                action_result = f"Pressed keys: {', '.join(instruction.key_sequence)}"
-            else:
-                error = "No key sequence provided for press_key action"
+                    try:
+                        print(f"Attempting to press key: '{key}'")
+                        
+                        # Map key names to e2b format (based on e2b documentation)
+                        key_mapping = {
+                            "return": "enter",
+                            "ret": "enter", 
+                            "enter": "enter",
+                            "space": "space",
+                            "tab": "tab",
+                            "backspace": "backspace",
+                            "delete": "delete",
+                            "escape": "escape",
+                            "esc": "escape",
+                            "up": "up",
+                            "down": "down",
+                            "left": "left",
+                            "right": "right",
+                            "home": "home",
+                            "end": "end",
+                            "pageup": "pageup",
+                            "pagedown": "pagedown",
+                        }
+                        
+                        # Get the correct key name for e2b_desktop
+                        desktop_key = key_mapping.get(key.lower(), key)
+                        
+                        # Press the key using the new API
+                        if hasattr(desktop, "press"):
+                            desktop.press(desktop_key)
+                            pressed_keys.append(desktop_key)
+                            print(f"Used press('{desktop_key}')")
+                        elif hasattr(desktop, "key_press"):
+                            desktop.key_press(desktop_key)
+                            pressed_keys.append(desktop_key)
+                            print(f"Used key_press('{desktop_key}')")
+                        else:
+                            raise ValueError("No suitable key press method found")
+                            
+                        time.sleep(0.05)  # Small delay between keys
+                        
+                        # Special handling for Enter key - add extra delay for page loading
+                        if key.lower() in ["return", "ret", "enter"]:
+                            print("Enter key pressed - waiting for page to load...")
+                            time.sleep(2.0)  # Wait for search to execute and page to load
+                        
+                    except Exception as e:
+                        print(f"Error pressing key {key}: {e}")
+                        error = f"Error pressing key {key}: {e}"
+                        break
                 
-        elif instruction.action_type == ActionType.scroll:
-            direction = instruction.scroll_direction
-            amount = 3  # Default scroll amount
-            desktop.scroll(direction, amount)
-            action_performed = f"scroll {direction}"
-            action_result = f"Scrolled {direction} by {amount}"
-            print(f"Scrolled {direction} by {amount}")
+                if not error:
+                    action_performed = f"press_key: {instruction.key_sequence}"
+                    action_result = f"Successfully pressed keys: {', '.join(pressed_keys)}"
+                    print(f"Successfully pressed keys: {pressed_keys}")
+                    
+                    # Enhanced validation for Enter key presses
+                    if any(key.lower() in ["return", "ret", "enter"] for key in instruction.key_sequence):
+                        action_result += " (Enter key processed - search or action should be executed)"
+                        print("Enter key press completed - search or action should be executed")
+            except Exception as e:
+                error = f"Keypress failed: {str(e)}"
+                print(f"Keypress error: {e}")
+        else:
+            error = "No key sequence provided for press_key action"
+                
+    elif instruction.action_type == ActionType.scroll:
+        direction = instruction.scroll_direction
+        amount = 3  # Default scroll amount
+        
+        try:
+            print(f"Attempting to scroll {direction} by {amount}")
             
-        elif instruction.action_type == ActionType.wait:
-            wait_time = instruction.wait_seconds
-            desktop.wait(wait_time * 1000)  # e2b expects milliseconds
+            if hasattr(desktop, "scroll"):
+                # Use the new API pattern
+                desktop.scroll(direction, amount)
+                action_performed = f"scroll {direction}"
+                action_result = f"Scrolled {direction} by {amount}"
+                print(f"Successfully scrolled {direction} by {amount}")
+            else:
+                error = "Desktop does not support scroll method"
+                
+        except Exception as e:
+            error = f"Scroll failed: {str(e)}"
+            print(f"Scroll error: {e}")
+        
+    elif instruction.action_type == ActionType.wait:
+        wait_time = instruction.wait_seconds
+        try:
+            print(f"Waiting for {wait_time} seconds")
+            
+            # Use sleep instead of desktop.wait to be more reliable
+            time.sleep(wait_time)
+            
             action_performed = f"wait {wait_time}s"
             action_result = f"Waited {wait_time} seconds"
-            print(f"Waited {wait_time} seconds")
+            print(f"Successfully waited {wait_time} seconds")
             
-        elif instruction.action_type == ActionType.navigate:
-            if instruction.url:
-                # Navigate by typing URL in address bar using correct e2b API
-                # Use Ctrl+L to focus address bar
-                desktop.press("ctrl+l")
-                desktop.wait(500)
-                desktop.write(instruction.url)
-                desktop.press("enter")
-                action_performed = f"navigate to {instruction.url}"
-                action_result = f"Navigated to {instruction.url}"
-                print(f"Navigated to {instruction.url}")
-            else:
-                error = "No URL provided for navigate action"
-                
-        # Wait a bit for action to complete
-        desktop.wait(1000)
+        except Exception as e:
+            error = f"Wait failed: {str(e)}"
+            print(f"Wait error: {e}")
         
-    except Exception as e:
-        error = f"Action execution failed: {str(e)}"
-        print(f"Action execution error: {e}")
+    elif instruction.action_type == ActionType.navigate:
+        if instruction.url:
+            try:
+                print(f"Attempting to navigate to: {instruction.url}")
+                
+                # Navigate by typing URL in address bar using new API
+                # Use Ctrl+L to focus address bar
+                if hasattr(desktop, "press"):
+                    desktop.press("ctrl+l")
+                    time.sleep(0.5)
+                    
+                    # Type the URL
+                    if hasattr(desktop, "write"):
+                        desktop.write(instruction.url)
+                        time.sleep(0.2)
+                        
+                        # Press Enter
+                        desktop.press("enter")
+                        time.sleep(8)  # Wait for navigation to complete and page to load
+                        print("Waited 8 seconds for page to fully load after navigation")
+                        
+                        action_performed = f"navigate to {instruction.url}"
+                        action_result = f"Navigated to {instruction.url}"
+                        print(f"Successfully navigated to {instruction.url}")
+                    else:
+                        error = "No write method available for typing URL"
+                else:
+                    error = "No press method available for key presses"
+                    
+            except Exception as e:
+                error = f"Navigation failed: {str(e)}"
+                print(f"Navigation error: {e}")
+        else:
+            error = "No URL provided for navigation"
+            
+    elif instruction.action_type == ActionType.screenshot:
+        try:
+            print("Taking screenshot...")
+            
+            # Take screenshot using desktop API
+            screenshot_data = desktop.screenshot()
+            if screenshot_data:
+                action_performed = "take_screenshot"
+                action_result = f"Screenshot taken: {len(screenshot_data)} bytes"
+                print(f"Successfully took screenshot: {len(screenshot_data)} bytes")
+            else:
+                error = "Screenshot returned no data"
+                
+        except Exception as e:
+            error = f"Screenshot failed: {str(e)}"
+            print(f"Screenshot error: {e}")
+    
+    elif instruction.action_type == ActionType.type_and_enter:
+        if instruction.text_content:
+            try:
+                # Wait for page to be ready before typing
+                wait_for_page_ready(1)
+                
+                print(f"Executing combined type_and_enter action: '{instruction.text_content}'")
+                
+                # Import the combined action function
+                from agent.cua.actions import type_and_enter
+                
+                # Execute the combined action
+                success = type_and_enter(desktop, instruction.text_content)
+                
+                if success:
+                    action_performed = f"type_and_enter: {instruction.text_content}"
+                    action_result = f"Successfully typed '{instruction.text_content}' and pressed Enter"
+                    print(f"Combined action completed successfully")
+                else:
+                    error = f"Combined type_and_enter action failed"
+                    print(f"Combined action failed")
+                    
+            except Exception as e:
+                error = f"Combined type_and_enter failed: {str(e)}"
+                print(f"Combined type_and_enter error: {e}")
+        else:
+            error = "No text provided for type_and_enter action"
+    
+    else:
+        error = f"Unsupported action type: {instruction.action_type}"
+        print(f"Unsupported action type: {instruction.action_type}")
     
     return action_performed, action_result, error, elements_found
 
