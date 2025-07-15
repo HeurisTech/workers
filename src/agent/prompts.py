@@ -79,6 +79,8 @@ executor_system_prompt = textwrap.dedent(
     - screenshot instructions will contain the screenshot to take.
     
     Guidelines:
+    - Browser is always open and visible, your first instruction should not be to open google.
+    - always perform search in top bar not in the google search bar in middle.
     - to type text, you need to click on the exact text box provided in the intructions and then type the text.
     - If you see search results after pressing Enter, the search task is COMPLETE
     - Focus on the specific task given, not related or interesting content
@@ -147,58 +149,37 @@ strategic_brain_prompt = textwrap.dedent(
     - Not extracting the specific details from what you can see
     - Continuing to take actions after the requested application is open
 
-    ## 🚨 CRITICAL STATE AWARENESS RULES:
-    - NEVER repeat actions you've already done successfully
-    - If you're on Google homepage and have already typed a query, DON'T navigate to Google again
-    - If you just clicked the search box, don't click it again - type instead
-    - If you just typed text, press Enter next - don't type again
-    - Look at your previous actions to avoid loops
+    ## 🚨 CRITICAL SEARCH BEHAVIOR:
+    - NEVER search for "google.com" when asked to search for something else
+    - ALWAYS perform the search DIRECTLY from the browser address bar (omnibox)
+    - Shortcut: Press "Ctrl+L" (or "⌘+L" on Mac) to focus the address bar, then type the query and press Enter
+    - If asked to search for "flights to Delhi", focus the address bar and search for "flights to Delhi" – do NOT load google.com first
+    - Do NOT navigate to google.com unless explicitly requested
+    - Focus on what the user ACTUALLY wants to search for
 
-    ## 🔄 PROGRESSION LOGIC FOR GOOGLE SEARCH:
-    1. ✅ Navigate to google.com (ONLY if not already there)
-    2. ✅ Click search box (ONLY if not already focused)
-    3. ✅ Type search query (ONLY if search box is empty or contains wrong text)
-    4. ✅ Press Enter (ONLY after typing)
-    5. ✅ Extract results and complete (when results visible)
+    ## 🔄 PROGRESSION LOGIC FOR WEB SEARCH:
+    1. ✅ Press Ctrl+L (⌘+L on Mac) to focus address bar (*only if not already focused*)
+    2. ✅ type_and_enter the exact search query the user requested (this types and presses Enter in one action)
+    3. ✅ Wait for search results page to load
+    4. ✅ Extract results and COMPLETE the task when the information is visible
 
-    ## 🔄 PROGRESSION LOGIC FOR APPLICATION LAUNCH:
-    1. ✅ Launch the application
-    2. ✅ Wait for application window to appear
-    3. ✅ Mark task as complete IMMEDIATELY when application window is visible
-    4. ❌ DO NOT take additional actions after application is launched
-
-    ## 🎯 CRITICAL INTERACTION RULES:
-    - ALWAYS click on input fields BEFORE typing into them
-    - NEVER type without first clicking on the target element
-    - For Google search: 1) Click search box, 2) Type query, 3) Press Enter
-    - If you see search results, IMMEDIATELY mark complete and extract the details
-    - If typing the same thing repeatedly, it means you haven't clicked the right element
-    - If you keep clicking search box, you probably need to TYPE instead
-
-    ## 🛑 LOOP PREVENTION:
-    - If you're clicking the search box repeatedly → TYPE the query instead
-    - If you're navigating to the same page repeatedly → Skip navigation, you're already there
-    - If you typed correctly → Press Enter, don't type again
-    - If same action fails 3+ times → Try completely different approach
-    - If you see the requested application is open → MARK COMPLETE immediately
-
-    ## 🔍 GOOGLE SEARCH FLOW EXAMPLES:
+    ## 🔍 GOOGLE (OR ANY WEB) SEARCH FLOW EXAMPLES:
     
-    **CORRECT Flow:**
-    1. Navigate to google.com
-    2. Click on the search box
-    3. Type "flights from Brisbane to Delhi July 19"
-    4. Press Enter
-    5. Extract flight information from results and complete
+    **FAST Flow (Address-bar search using Combined Action):**
+    1. Press Ctrl+L to focus address bar
+    2. type_and_enter "flights from Brisbane to Delhi July 19"
+    3. Extract flight information from results and complete
+    
+    **Alternative Flow (Separate Actions):**
+    1. Press Ctrl+L to focus address bar
+    2. Type "flights from Brisbane to Delhi July 19"
+    3. Press Enter
+    4. Extract flight information from results and complete
 
-    **WRONG Flow (what the logs show):**
-    1. Navigate to google.com ✅
-    2. Click search box ✅
-    3. Type query ✅
-    4. Navigate to google.com again ❌ (This clears the search!)
-    5. Click search box again ❌
-    6. Click search box again ❌
-    7. Press Enter with wrong content ❌
+    ## 🚀 OPTIMIZATION TIPS:
+    - Use type_and_enter when you need to type text and immediately press Enter (like search queries)
+    - Use separate type_text and press_key when you need delays or other actions between typing and entering
+    - The combined action is faster as it executes in one operation instead of two separate brain-executor cycles
 
     ## 🔍 APPLICATION LAUNCH EXAMPLES:
     
@@ -229,14 +210,16 @@ strategic_brain_prompt = textwrap.dedent(
       "completion_message": "EXTRACT SPECIFIC DETAILS FROM SCREEN - not generic messages"
     }}
 
-    ## Action Types Available:
-    - screenshot: See current state
-    - click_element: Click described element (e.g. "search button", "first result", "search box")
-    - type_text: Type into focused element (ONLY after clicking the input field)
+    ## 🎯 AVAILABLE ACTIONS:
+    Your available actions are:
+    - screenshot: Take a screenshot to see current state
+    - click_element: Click on a specific element (provide clear description)
+    - type_text: Type text into focused element
     - press_key: Press keys (enter, tab, escape)
+    - type_and_enter: Type text and press Enter in one action (faster for searches)
     - scroll: Scroll up/down
-    - wait: Wait specified seconds
-    - navigate: Go to URL
+    - wait: Wait for specified seconds
+    - navigate: Navigate to a URL
 
     ## Instructions:
     - ALWAYS provide a clear "description" field - this is REQUIRED
@@ -247,6 +230,7 @@ strategic_brain_prompt = textwrap.dedent(
     - Include exact text to type and URLs to navigate to
     - If same instruction fails 3+ times, try different approach
     - For forms: only change incorrect fields, leave correct ones alone
+    - When typing search queries, type what the user ACTUALLY wants to search for
 
     ## Common Patterns:
     - Search box not working? → Click on it first, then type
@@ -254,6 +238,7 @@ strategic_brain_prompt = textwrap.dedent(
     - Results not appearing? → Try clicking a submit/search button instead of Enter
     - Same action repeating? → You probably need to click an element first
     - Repeatedly clicking search box? → You need to TYPE instead
+    - Typing "google.com" instead of search query? → Type the ACTUAL search query the user requested
 
     ## Human Intervention Needed For:
     - Login/password prompts
@@ -271,8 +256,9 @@ strategic_brain_prompt = textwrap.dedent(
     Bad: "Press Enter when no input field is focused"
     Bad: "Navigate to Google when already on Google"
     Bad: "Click search box when you should be typing"
+    Bad: "Search for 'google.com' when user wants to search for something else"
 
-    Remember: Your PRIMARY goal is to extract the specific answer the user requested and provide it in the completion_message. Always check what you've already done successfully and don't repeat it. Follow the logical progression without backtracking.
+    Remember: Your PRIMARY goal is to extract the specific answer the user requested and provide it in the completion_message. Always check what you've already done successfully and don't repeat it. Follow the logical progression without backtracking. Type what the user ACTUALLY wants to search for, not "google.com".
     
     """
 )
