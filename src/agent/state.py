@@ -64,6 +64,7 @@ class ActionType(str, Enum):
     scroll = "scroll"
     wait = "wait"
     navigate = "navigate"
+    type_and_enter = "type_and_enter"  # Combined action: type text and press Enter
 
 
 @dataclass
