@@ -596,6 +596,7 @@ async def vision_executor(state: ExecutionState, *, config: RunnableConfig) -> E
                         
                         # Use OpenAI Computer Use model to analyze screenshot and click
                         from agent.cua.client import take_action
+                        from agent.cua.actions import execute_click_action_with_validation
                         
                         # Create messages for OpenAI Computer Use model
                         messages = [
@@ -635,27 +636,54 @@ async def vision_executor(state: ExecutionState, *, config: RunnableConfig) -> E
                                         import json
                                         args = json.loads(tool_call['function']['arguments'])
                                         
-                                        # Execute the computer action
+                                        # Execute the computer action with proper validation
                                         if args.get('action') == 'click' and 'coordinate' in args:
                                             x, y = args['coordinate']
-                                            desktop.left_click(x, y)
-                                            action_performed = f"click_element: {instruction.target_element}"
-                                            action_result = f"Clicked on {instruction.target_element} at coordinates ({x}, {y})"
-                                            elements_found = [instruction.target_element]
-                                            print(f"Successfully clicked on {instruction.target_element} at ({x}, {y})")
+                                            
+                                            # Use the new validation function for better click handling
+                                            click_result = execute_click_action_with_validation(
+                                                desktop, x, y, instruction.target_element
+                                            )
+                                            
+                                            if click_result['success']:
+                                                action_performed = f"click_element: {instruction.target_element}"
+                                                action_result = f"Successfully clicked on {instruction.target_element} at coordinates ({x}, {y})"
+                                                elements_found = [instruction.target_element]
+                                                print(f"Successfully clicked on {instruction.target_element} at ({x}, {y})")
+                                                
+                                                # Wait for the page to respond to the click
+                                                import time
+                                                time.sleep(2)
+                                                print("Waited 2 seconds for page to respond to click")
+                                            else:
+                                                error = f"Click failed: {click_result['error']}"
+                                                action_performed = f"click_element_failed: {instruction.target_element}"
+                                                action_result = f"Failed to click on {instruction.target_element} at ({x}, {y}): {click_result['error']}"
+                                                print(f"Click failed: {click_result['error']}")
+                                        elif args.get('action') == 'screenshot':
+                                            # If the model decides to take a screenshot instead of clicking
+                                            action_performed = "screenshot"
+                                            action_result = "OpenAI model took a screenshot instead of clicking"
+                                            print("OpenAI model took a screenshot instead of clicking")
                                         else:
-                                            error = f"Unexpected action from model: {args.get('action')}"
+                                            error = f"Unexpected action from model: {args.get('action', 'unknown')}"
+                                            print(f"Unexpected action from model: {args.get('action', 'unknown')}")
                                     else:
                                         error = f"Unexpected tool call: {tool_call['function']['name']}"
+                                        print(f"Unexpected tool call: {tool_call['function']['name']}")
                                 else:
                                     error = "No tool calls in response"
+                                    print("No tool calls in response")
                             else:
                                 error = "No tool calls in message"
+                                print("No tool calls in message")
                         else:
                             error = "Invalid response from OpenAI model"
+                            print("Invalid response from OpenAI model")
                             
                     else:
                         error = "Failed to take screenshot for visual analysis"
+                        print("Failed to take screenshot for visual analysis")
                         
                 except Exception as e:
                     error = f"Visual analysis failed: {str(e)}"
