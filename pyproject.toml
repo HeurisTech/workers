@@ -25,6 +25,8 @@ dependencies = [
     "e2b-desktop",
     "pydantic>=2.6",
     "python-dateutil>=2.8",
+    "supabase",
+    "requests",
 ]
 
 [project.optional-dependencies]

@@ -44,3 +44,6 @@ class InputState:
         A new list of messages with the messages from `right` merged into `left`.
         If a message in `right` has the same ID as a message in `left`, the
         message from `right` will replace the message from `left`."""
+
+class KnowledgeSearchInput(BaseModel):
+    query: str = Field(description="The search query to find relevant information in the knowledge base.")
