@@ -13,6 +13,7 @@ from langgraph.types import CachePolicy
 
 from langgraph_mcp.state import InputState
 from langgraph_mcp.mcp_wrapper import apply, GetTools, RunTool
+from langgraph_mcp.tools import get_merged_tools, execute_merged_tool, is_custom_tool
 from langgraph_mcp.utils import load_chat_model
 
 from langgraph_mcp.mcp_react_graph import make_graph
@@ -89,7 +90,8 @@ async def execute_task(state: State, *, config: RunnableConfig) -> Dict[str, Any
     if not server_cfg:
         return {"messages": [AIMessage(content=f'No configuration found for the expert {task_expert}.')]}
 
-    tools = await apply(task_description, server_cfg, GetTools()) if server_cfg else []  # expert tools list
+    # Get merged tools (both MCP and custom tools)
+    tools = await get_merged_tools(task_expert, server_cfg) if server_cfg else []
     if not tools:
         return {"messages": [AIMessage(content=f'No tools available with the expert {task_expert}.')]}
     
@@ -160,8 +162,6 @@ async def tools(state: State, *, config: RunnableConfig) -> Dict[str, Any]:
     if not isinstance(last_message, AIMessage) or not hasattr(last_message, 'tool_calls') or not last_message.tool_calls:
         return {"messages": [AIMessage(content="Error: We should not be in tools node without tool_calls.")]}
     
-    tool_call = last_message.tool_calls[0]  # TODO: handle multiple tool calls
-    
     task = state.planner_result.get_current_task()
     if not task:
         return {"messages": [AIMessage(content='We should not be in tools node without a current task.')]}
@@ -173,13 +173,31 @@ async def tools(state: State, *, config: RunnableConfig) -> Dict[str, Any]:
     if not server_cfg:
         return {"messages": [AIMessage(content=f'No configuration found for the expert {task_expert}.')]}
 
-    # RunTool could raise an exception, so we need to handle it
-    try:
-        tool_output = await apply(task_expert, server_cfg, RunTool(tool_call['name'], **tool_call['args']))
-    except Exception as e:
-        tool_output = f"Error: {e}"
+    # Handle ALL tool calls, not just the first one
+    tool_messages = []
+    for tool_call in last_message.tool_calls:
+        tool_name = tool_call['name']
+        tool_args = tool_call['args']
 
-    return {"messages": [ToolMessage(content=tool_output, tool_call_id=tool_call['id'])]}
+        # ##TODO: Hardcoded organization_id injection for knowledge retrieval tool
+        # This should be made more generic and configurable
+        if tool_name == "retrieve_organizational_knowledge":
+            if 'organization_id' not in tool_args or not tool_args.get('organization_id'):
+                tool_args['organization_id'] = cfg.organization_id
+
+        try:
+            tool_output = await execute_merged_tool(
+                tool_name=tool_name,
+                tool_args=tool_args,
+                server_name=task_expert,
+                server_config=server_cfg
+            )
+        except Exception as e:
+            tool_output = f"Error: {e}"
+        
+        tool_messages.append(ToolMessage(content=str(tool_output), tool_call_id=tool_call['id']))
+
+    return {"messages": tool_messages}
 
 
 def human_input(state: State, *, config: RunnableConfig) -> Dict[str, Any]:

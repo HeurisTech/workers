@@ -49,6 +49,10 @@ class Configuration:
             "description": "The language model used for generating final responses. Should be in the form: provider/model-name."
         },
     )
+    organization_id: str = field(
+        default="",
+        metadata={"description": "The organization ID to use for the conversation."},
+    )
 
     @classmethod
     def from_runnable_config(

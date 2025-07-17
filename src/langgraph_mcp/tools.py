@@ -11,6 +11,8 @@ import os
 import re
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
+import json
+from langgraph_mcp.supabase.retriever import retrieve_organizational_knowledge
 
 
 # ============================================================================
@@ -335,6 +337,71 @@ class GrepSearchTool(CustomToolFunction):
         
         return results
 
+class KnowledgeRetrievalTool(CustomToolFunction):
+    """Custom tool for retrieving organizational knowledge."""
+
+    @property
+    def name(self) -> str:
+        return "retrieve_organizational_knowledge"
+
+    @property
+    def description(self) -> str:
+        return (
+            "Retrieves documents from the knowledge base for a specific organization. "
+            "Use this to find relevant information, documentation, or examples "
+            "before trying to write code or answer questions."
+        )
+
+    @property
+    def parameters(self) -> Dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The user's query or question to search for in the knowledge base."
+                },
+                "organization_id": {
+                    "type": "string",
+                    "description": "The ID of the organization. If not provided, the system will try to use the ID from the configuration."
+                },
+                "search_type": {
+                    "type": "string",
+                    "description": "The type of search to perform. Can be 'similarity', 'text', or 'hybrid'. Defaults to 'text'.",
+                    "default": "text"
+                }
+            },
+            "required": ["query"]
+        }
+
+    async def execute(self, **kwargs) -> str:
+        query = kwargs.get("query")
+        organization_id = kwargs.get("organization_id")
+        search_type = kwargs.get("search_type", "text")
+
+        print(f"[DEBUG] KnowledgeRetrievalTool executed with: query='{query}', organization_id='{organization_id}', search_type='{search_type}'")
+        print(f"[DEBUG] All kwargs: {kwargs}")
+
+        if not query:
+            return "Error: 'query' is a required parameter."
+
+        if not organization_id:
+            print(f"[DEBUG] organization_id is missing or empty: '{organization_id}'")
+            return "Error: 'organization_id' is missing. The system failed to provide it from configuration."
+
+        try:
+            print(f"[DEBUG] Calling retrieve_organizational_knowledge with organization_id: '{organization_id}'")
+            results = retrieve_organizational_knowledge(
+                query=query,
+                organization_id=organization_id,
+                search_type=search_type
+            )
+            if not results:
+                return "No results found for your query."
+            return json.dumps(results, indent=2)
+        except Exception as e:
+            print(f"[DEBUG] Error in retrieve_organizational_knowledge: {e}")
+            return f"An error occurred while calling the retrieval API: {e}"
 
 class FileReadTool(CustomToolFunction):
     """Custom tool for reading file contents."""
@@ -698,6 +765,7 @@ class ShellCommandTool(CustomToolFunction):
 
 def register_tools():
     """Register all tools."""
+    register_tool(KnowledgeRetrievalTool())
     register_tool(GrepSearchTool())
     register_tool(FileReadTool())
     register_tool(FileListTool())
