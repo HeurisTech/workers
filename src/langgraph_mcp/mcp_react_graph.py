@@ -6,9 +6,15 @@ from typing import cast, Any, Dict
 
 @asynccontextmanager
 async def make_graph(model: str, expert: str, expert_config: Dict[str, Any]):
+    # Filter out non-MCP parameters like 'description' before passing to MCP client
+    mcp_config = {k: v for k, v in expert_config.items() if k != 'description'}
+    
+    # Extract or set description (if not present, use server name)
+    description = expert_config.get('description', expert)
+    
     client = MultiServerMCPClient(
         cast(Dict[str, Any], {
-            expert: expert_config
+            expert: mcp_config
         })
     )
 

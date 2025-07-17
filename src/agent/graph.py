@@ -137,7 +137,7 @@ async def setup_sandbox(state: ExecutionState, *, config: RunnableConfig) -> Exe
         # Reset the flag
         set_state_field(state, "needs_new_sandbox", False)
     
-    # Extract user request from the messages array (compatible with planner_style_agent schema)
+    # Extract user request from the messages array (compatible with goal_oriented_agent schema)
     user_request = ""
     
     # First, check if we have messages in the state (from GraphInput)

@@ -15,7 +15,7 @@ Based on `/assistants/search` endpoint, we have these graphs:
 
 | Graph ID                 | Assistant ID                           | Input Format   | Description                                 |
 | ------------------------ | -------------------------------------- | -------------- | ------------------------------------------- |
-| `planner_style_agent`    | `08ab9ba0-aaee-594b-9fb0-d7a8e3afc738` | `messages`     | General planning and orchestration          |
+| `goal_oriented_agent`    | `08ab9ba0-aaee-594b-9fb0-d7a8e3afc738` | `messages`     | General planning and orchestration          |
 | `assist_with_planner`    | `940edd11-f3fc-5023-8844-ad56d5df745a` | `messages`     | Task planning with expert delegation        |
 | `assist_with_playwright` | `d1e5b1c1-917d-5050-a39f-ae9e03a6a9ff` | `messages`     | Browser automation specialist               |
 | `computer_use`           | Multiple IDs                           | `user_request` | Computer interaction and desktop automation |
@@ -24,11 +24,11 @@ Based on `/assistants/search` endpoint, we have these graphs:
 
 ### 1. Messages Format (Standard Graphs)
 
-**Used by:** `planner_style_agent`, `assist_with_planner`, `assist_with_playwright`
+**Used by:** `goal_oriented_agent`, `assist_with_planner`, `assist_with_playwright`
 
 ```json
 {
-  "assistant_id": "planner_style_agent",
+  "assistant_id": "goal_oriented_agent",
   "input": {
     "messages": [
       {
@@ -46,7 +46,7 @@ Based on `/assistants/search` endpoint, we have these graphs:
 curl -X POST http://localhost:2024/threads/{thread_id}/runs/stream \
   -H "Content-Type: application/json" \
   -d '{
-    "assistant_id": "planner_style_agent",
+    "assistant_id": "goal_oriented_agent",
     "input": {
       "messages": [
         {
@@ -166,10 +166,10 @@ const transformToMessages = (computerUseResponse) => {
 ## Testing Commands
 
 ```bash
-# Test planner_style_agent (messages format)
+# Test goal_oriented_agent (messages format)
 curl -X POST http://localhost:2024/threads/{thread_id}/runs/stream \
   -H "Content-Type: application/json" \
-  -d '{"assistant_id": "planner_style_agent", "input": {"messages": [{"role": "user", "content": "hello"}]}}'
+  -d '{"assistant_id": "goal_oriented_agent", "input": {"messages": [{"role": "user", "content": "hello"}]}}'
 
 # Test computer_use (user_request format)
 curl -X POST http://localhost:2024/threads/{thread_id}/runs/stream \

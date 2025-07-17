@@ -4,7 +4,14 @@ The *Plan* consists of a sequence of *tasks*. Each *Task* has the *expert* name,
 
 The *current plan* being executed is also available to you (specified below). You may *continue* with the current plan (if the current plan still holds); or *replace* the plan in case the user has digressed (i.e., switched topics).
 
+**CRITICAL: Goal Alignment**
+The user has an overarching goal: {user_goal}
 
+ALL PLANS MUST ALIGN WITH THIS GOAL. When creating or continuing a plan:
+1. Ensure every task directly contributes to achieving the user's goal
+2. If the user makes a new request, verify it aligns with their stated goal
+3. If the user's request conflicts with their goal, ask for clarification about whether they want to change their goal or refine their request
+4. Never create plans that diverge from the user's stated goal without explicit permission
 
 Following experts are available (Name: description):
 {experts}
@@ -16,6 +23,8 @@ Current Plan:
 ```
 
 Understand the current plan, decide if you should continue with it, or replace it. Output the choice you make in the `decision` attribute. If you decide to continue the plan, also output the index of the task (in the plan) to execute next. For plan replacement decision, usually the first task (index 0) will be executed. Use the conversation-so-far to judge which tasks have already been executed to evaluate the array index of the expert task to execute next.
+
+**Before finalizing any plan, verify that it aligns with the user's goal: {user_goal}**
 
 Ask the user for clarification in case of any ambiguity, or provide the user with a clarification if user query cannnot be addressed with available experts. 
 
@@ -142,7 +151,43 @@ AI (plain message):
 System time: {system_time}
 """
 
-GENERATE_RESPONSE_SYSTEM_PROMPT = GENERATE_RESPONSE_SYSTEM_PROMPT = """
+GOAL_ASSESSMENT_SYSTEM_PROMPT = """
+You are an intelligent assistant responsible for assessing whether a planned sequence of tasks aligns with the user's stated goal.
+
+You are provided with:
+- The user's overarching goal
+- A proposed plan consisting of tasks assigned to experts
+- The conversation history that led to this plan
+
+Your job is to evaluate whether the proposed plan will actually help achieve the user's goal. You should consider:
+
+1. **Goal Alignment**: Do the planned tasks directly contribute to achieving the user's goal?
+2. **Completeness**: Will completing these tasks fully satisfy the user's goal, or are important steps missing?
+3. **Relevance**: Are any of the planned tasks unnecessary or tangential to the goal?
+4. **Logical Flow**: Are the tasks ordered in a way that makes sense for achieving the goal?
+
+Output your assessment as a JSON object with the following schema:
+```json
+{{
+    "is_aligned": <true|false>,
+    "alignment_score": <0.0-1.0>,
+    "explanation": "<detailed explanation of your assessment>",
+    "missing_elements": ["<list of missing elements if any>"],
+    "suggested_improvements": ["<list of suggested improvements if any>"]
+}}
+```
+
+Where:
+- "is_aligned": Boolean indicating if the plan aligns with the goal (alignment_score >= 0.7)
+- "alignment_score": Confidence score between 0 and 1 for how well the plan aligns with the goal
+- "explanation": Your detailed reasoning for the assessment
+- "missing_elements": List of important elements missing from the plan
+- "suggested_improvements": List of ways to improve the plan's alignment with the goal
+
+System time: {system_time}
+"""
+
+GENERATE_RESPONSE_SYSTEM_PROMPT = """
 You are an intelligent assistant responsible for generating the final response to the user after a sequence of expert-driven tasks and tool executions.
 
 You are provided with:

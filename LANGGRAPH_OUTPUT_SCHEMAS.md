@@ -87,7 +87,7 @@ These graphs return conversational message arrays compatible with standard chat 
 
 These graphs return message arrays plus additional planning/orchestration metadata.
 
-#### `planner_style_agent`
+#### `goal_oriented_agent`
 
 **Output Schema:**
 
@@ -195,7 +195,7 @@ Computer automation graphs use a completely different output schema focused on t
 | Graph Type               | Standard Chat UI        | Custom Handler Needed           |
 | ------------------------ | ----------------------- | ------------------------------- |
 | `assist_with_playwright` | ✅ Direct support       | ❌ Not needed                   |
-| `planner_style_agent`    | ✅ Use `messages` field | ⚠️ Optional: show planning info |
+| `goal_oriented_agent`    | ✅ Use `messages` field | ⚠️ Optional: show planning info |
 | `assist_with_planner`    | ✅ Use `messages` field | ⚠️ Optional: show planning info |
 | `computer_use`           | ❌ Incompatible         | ✅ Required                     |
 
@@ -216,7 +216,7 @@ function handleGraphOutput(data: any, graphType: string) {
         messages: data.messages,
       };
 
-    case "planner_style_agent":
+    case "goal_oriented_agent":
     case "assist_with_planner":
       return {
         type: "planning",
@@ -257,7 +257,7 @@ curl -X POST "http://localhost:2024/threads/{thread_id}/runs/stream" \
 curl -X POST "http://localhost:2024/threads/{thread_id}/runs/stream" \
   -H "Content-Type: application/json" \
   -d '{
-    "assistant_id": "planner_style_agent",
+    "assistant_id": "goal_oriented_agent",
     "input": {"messages": [{"role": "user", "content": "test"}]}
   }'
 

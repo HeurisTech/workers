@@ -63,5 +63,5 @@ This documentation provides details necessary for Large Language Models (LLMs) a
     ```bash
     source .venv/bin/activate
     pytest tests/test_assistant_with_planner.py
-    pytest tests/test_planner_style_agent.py
+    pytest tests/test_goal_oriented_agent.py
     ```

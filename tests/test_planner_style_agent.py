@@ -48,11 +48,11 @@ def langgraph_server():
     process.wait()
 
 def test_github_repository_search(langgraph_server):
-    """Tests searching for a GitHub repository with planner_style_agent."""
+    """Tests searching for a GitHub repository with goal_oriented_agent."""
 
     client = get_sync_client(url=langgraph_server)
     assistant = client.assistants.create(
-        graph_id="planner_style_agent",
+        graph_id="goal_oriented_agent",
         config={"configurable": {"mcp_server_config": MCP_SERVER_CONFIG}},
     )
     thread = client.threads.create()
@@ -92,10 +92,10 @@ def test_github_repository_search(langgraph_server):
     assert tool_output and 'Software & quality agent built as a set of langgraphs' in tool_output
 
 def test_smithery_server_search(langgraph_server):
-    """Tests searching for a server on Smithery with planner_style_agent."""
+    """Tests searching for a server on Smithery with goal_oriented_agent."""
     client = get_sync_client(url=langgraph_server)
     assistant = client.assistants.create(
-        graph_id="planner_style_agent",
+        graph_id="goal_oriented_agent",
         config={"configurable": {"mcp_server_config": MCP_SERVER_CONFIG}},
     )
     thread = client.threads.create()

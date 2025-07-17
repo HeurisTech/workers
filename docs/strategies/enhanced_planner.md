@@ -38,7 +38,7 @@ The Enhanced Planner Style Agent builds upon the original planner strategy by ad
 src/langgraph_mcp/
 ├── tools.py               # All tools functionality (framework, registry, implementations, merging)
 ├── utils.py               # Utilities including AsyncInputManager
-└── planner_style/
+└── goal_oriented/
     ├── __init__.py        # Module initialization
     ├── config.py          # Enhanced configuration with goal assessment
     ├── state.py           # Extended state with goal tracking and async input
@@ -486,7 +486,7 @@ The enhanced agent includes comprehensive tests:
 
 Run tests with:
 ```bash
-python -m pytest tests/test_planner_style_agent.py -v
+python -m pytest tests/test_goal_oriented_agent.py -v
 ```
 
 ## Best Practices
@@ -520,9 +520,9 @@ python -m pytest tests/test_planner_style_agent.py -v
 
 ### Core Modules
 
-- **`langgraph_mcp.planner_style.graph`**: Main graph implementation
-- **`langgraph_mcp.planner_style.state`**: Enhanced state classes
-- **`langgraph_mcp.planner_style.config`**: Configuration management
+- **`langgraph_mcp.goal_oriented.graph`**: Main graph implementation
+- **`langgraph_mcp.goal_oriented.state`**: Enhanced state classes
+- **`langgraph_mcp.goal_oriented.config`**: Configuration management
 - **`langgraph_mcp.tools`**: Custom tool implementations
 - **`langgraph_mcp.tools`**: All tools functionality (framework, registry, implementations, merging)
 - **`langgraph_mcp.utils`**: Utilities including AsyncInputManager
@@ -554,7 +554,7 @@ To upgrade from the basic planner style agent:
 
 1. **Update Imports**:
 ```python
-from langgraph_mcp.planner_style.graph import graph
+from langgraph_mcp.goal_oriented.graph import graph
 ```
 
 2. **Configure Goal Assessment**:
@@ -567,8 +567,8 @@ config = {
 
 3. **Register Custom Tools** (optional):
 ```python
-# Tools are auto-registered when importing planner_style module
-from langgraph_mcp.planner_style.graph import graph
+# Tools are auto-registered when importing goal_oriented module
+from langgraph_mcp.goal_oriented.graph import graph
 ```
 
 4. **Update State Handling** (if customized):

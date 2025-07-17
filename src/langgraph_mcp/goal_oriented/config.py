@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, fields
 from typing import Annotated, Any, Dict, Optional, Type, TypeVar
 from langchain_core.runnables import RunnableConfig, ensure_config
 
-from langgraph_mcp.planner_style import prompts
+from langgraph_mcp.goal_oriented import prompts
 
 @dataclass(kw_only=True)
 class Configuration:
@@ -38,6 +38,11 @@ class Configuration:
         },
     )
 
+    organization_id: str = field(
+        default="",
+        metadata={"description": "The organization ID to use for the conversation."},
+    )
+
     generate_response_system_prompt: str = field(
         default=prompts.GENERATE_RESPONSE_SYSTEM_PROMPT,
         metadata={"description": "The system prompt used for generating final responses after plan completion."},
@@ -47,6 +52,18 @@ class Configuration:
         default="openai/gpt-4o",
         metadata={
             "description": "The language model used for generating final responses. Should be in the form: provider/model-name."
+        },
+    )
+
+    goal_assessment_system_prompt: str = field(
+        default=prompts.GOAL_ASSESSMENT_SYSTEM_PROMPT,
+        metadata={"description": "The system prompt used for assessing goal-plan alignment."},
+    )
+
+    goal_assessment_model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
+        default="openai/gpt-4o",
+        metadata={
+            "description": "The language model used for goal assessment. Should be in the form: provider/model-name."
         },
     )
 
