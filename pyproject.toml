@@ -20,7 +20,11 @@ dependencies = [
     "mcp[cli]",
     "openai",
     "python-dotenv",
-    "smithery"
+    "smithery",
+    "e2b",
+    "e2b-desktop",
+    "pydantic>=2.6",
+    "python-dateutil>=2.8",
 ]
 
 [project.optional-dependencies]
@@ -32,6 +36,9 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["langgraph_mcp"]
+packages = ["langgraph_mcp", "agent"]
+
 [tool.setuptools.package-dir]
 "langgraph_mcp" = "src/langgraph_mcp"
+"agent" = "src/agent"
+
