@@ -106,6 +106,11 @@ class AgentConfig:
         metadata={"description": "LangGraph recursion limit for brain-executor feedback loops."},
     )
 
+    organization_id: str = field(
+        default="",
+        metadata={"description": "The organization ID to use for the conversation."},
+    )
+    
     @classmethod
     def from_runnable_config(
         cls: Type[T], config: Optional[RunnableConfig] = None
