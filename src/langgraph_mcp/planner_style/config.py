@@ -1,16 +1,25 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field, fields
+from pathlib import Path
 from typing import Annotated, Any, Dict, Optional, Type, TypeVar
 from langchain_core.runnables import RunnableConfig, ensure_config
 
 from langgraph_mcp.planner_style import prompts
 
+def _get_merged_mcp_config(runtime_config: Dict[str, Any] = None) -> Dict[str, Any]:
+    """Load default tools and merge with runtime config."""
+    default_tools = json.load(open(Path(__file__).parent.parent.parent.parent / "default-tools.json"))
+    if runtime_config is None:
+        return default_tools
+    return {**default_tools, **runtime_config}
+
 @dataclass(kw_only=True)
 class Configuration:
 
     mcp_server_config: dict[str, Any] = field(
-        default_factory=dict,
+        default_factory=lambda: _get_merged_mcp_config(),
         metadata={"description": "Dictionary mapping MCP server name to its configuration."},
     )
 
@@ -53,6 +62,10 @@ class Configuration:
         default="",
         metadata={"description": "The organization ID to use for the conversation."},
     )
+
+    def __post_init__(self):
+        """Ensure mcp_server_config always has merged default + runtime values."""
+        self.mcp_server_config = _get_merged_mcp_config(self.mcp_server_config)
 
     @classmethod
     def from_runnable_config(

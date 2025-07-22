@@ -8,7 +8,7 @@ BASE_API_URL = os.getenv("OVEN_API_URL", "http://localhost:3000")
 RETRIEVE_ENDPOINT = f"{BASE_API_URL}/api/knowledge-base/retrieve"
 
 def retrieve_organizational_knowledge(
-    query: str, organization_id: str, search_type: str = "text",
+    query: str, organization_id: str, search_type: str = "hybrid",
 ) -> List[Dict[str, Any]]:
     """
     Retrieves documents from the knowledge base for a specific organization

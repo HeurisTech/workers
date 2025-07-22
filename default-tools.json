@@ -1,0 +1,5 @@
+{
+    "retrieve_organizational_knowledge": {
+        "description": "Retrieves documents from the knowledge base of user for a specific organization"
+    }
+}
