@@ -25,6 +25,35 @@ dependencies = [
     "e2b-desktop",
     "pydantic>=2.6",
     "python-dateutil>=2.8",
+    "langchain-community>=0.3.9",
+    "langchain-anthropic>=0.3.15",
+    "langchain-deepseek>=0.1.2",
+    "langchain-tavily",
+    "langchain-groq>=0.2.4",
+    "tavily-python>=0.5.0",
+    "arxiv>=2.1.3",
+    "pymupdf>=1.25.3",
+    "xmltodict>=0.14.2",
+    "linkup-sdk>=0.2.3",
+    "duckduckgo-search>=3.0.0",
+    "exa-py>=1.8.8",
+    "requests>=2.32.3",
+    "beautifulsoup4==4.13.3",
+    "httpx>=0.24.0",
+    "markdownify>=0.11.6",
+    "azure-identity>=1.21.0",
+    "azure-search>=1.0.0b2",
+    "azure-search-documents>=11.5.2",
+    "rich>=13.0.0",
+    "langgraph-cli[inmem]>=0.3.1",
+    "langsmith>=0.3.37",
+    "langchain-google-vertexai>=2.0.25",
+    "langchain-google-genai>=2.1.5",
+    "ipykernel>=6.29.5",
+    "supabase==2.16.0",
+    "supafunc==0.10.0",
+    "storage3==0.11.3",
+    "realtime==2.5.3",
 ]
 
 [project.optional-dependencies]
@@ -36,9 +65,10 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["langgraph_mcp", "agent"]
+packages = ["langgraph_mcp", "agent", "open_deep_research"]
 
 [tool.setuptools.package-dir]
 "langgraph_mcp" = "src/langgraph_mcp"
 "agent" = "src/agent"
+"open_deep_research" = "src/open_deep_research"
 
