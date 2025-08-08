@@ -368,3 +368,44 @@ deep_researcher_builder.add_edge("research_supervisor", "final_report_generation
 deep_researcher_builder.add_edge("final_report_generation", END)
 
 deep_researcher = deep_researcher_builder.compile()
+
+# Optional convenience: compile with persistence based on DATABASE_URI
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def compile_with_memory(database_uri: str | None = None):
+    """Yield a deep_researcher runnable compiled with a checkpointer.
+
+    Uses SQLite for URIs starting with 'sqlite://' or a filesystem path,
+    and Postgres for 'postgres://' or 'postgresql://'. Falls back to
+    in-memory (no persistence) when URI is missing or unsupported.
+    """
+    try:
+        if not database_uri:
+            yield deep_researcher_builder.compile()
+            return
+
+        uri = database_uri.strip()
+        if uri.startswith("postgresql") or uri.startswith("postgres"):
+            from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+            async with AsyncPostgresSaver.from_conn_string(uri) as saver:
+                yield deep_researcher_builder.compile(checkpointer=saver)
+            return
+
+        # SQLite (async)
+        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+        normalized = uri
+        if uri.startswith("sqlite:///"):
+            normalized = uri.replace("sqlite:///", "", 1)
+        elif uri.startswith("sqlite://"):
+            normalized = uri.replace("sqlite://", "", 1)
+
+        async with AsyncSqliteSaver.from_conn_string(normalized) as saver:
+            yield deep_researcher_builder.compile(checkpointer=saver)
+        return
+
+    except Exception:
+        yield deep_researcher_builder.compile()

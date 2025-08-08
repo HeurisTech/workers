@@ -54,6 +54,10 @@ dependencies = [
     "supafunc==0.10.0",
     "storage3==0.11.3",
     "realtime==2.5.3",
+    "psycopg[binary,pool]>=3.2.9",
+    "langgraph-checkpoint-postgres>=2.0.23",
+    "langgraph-checkpoint-sqlite>=2.0.11",
+    "msgpack>=1.1.1",
 ]
 
 [project.optional-dependencies]
