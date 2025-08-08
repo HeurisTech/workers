@@ -952,9 +952,12 @@ async def planner_node(state: ExecutionState, *, config: RunnableConfig) -> Exec
     """Legacy planner function - redirects to new strategic_brain."""
     return await strategic_brain(state, config=config)
 
-
+import os
 # Create and compile the graph
-workflow_graph = create_graph().compile(cache=InMemoryCache())
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+DB_URI = os.getenv("DATABASE_URI")
+checkpointer = AsyncPostgresSaver.from_conn_string(DB_URI)
+workflow_graph = create_graph().compile(cache=InMemoryCache(), checkpointer=checkpointer)
 workflow_graph.name = "Computer Use Agent"
 
 # Note: To use the recursion limit from config, invoke the graph like this:

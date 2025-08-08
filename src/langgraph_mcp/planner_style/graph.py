@@ -1,5 +1,6 @@
 # src/langgraph_mcp/planner_style/graph.py
 
+import os
 from datetime import datetime, timezone
 from typing import Any, Dict
 
@@ -224,5 +225,7 @@ builder.add_conditional_edges(
 builder.add_edge("human_input", "execute_task")
 builder.add_edge("tools", "execute_task")
 builder.add_edge("respond", END)
-
-graph = builder.compile(cache=InMemoryCache())
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+DB_URI = os.getenv("DATABASE_URI")
+checkpointer = AsyncPostgresSaver.from_conn_string(DB_URI)
+graph = builder.compile(cache=InMemoryCache(), checkpointer=checkpointer)
