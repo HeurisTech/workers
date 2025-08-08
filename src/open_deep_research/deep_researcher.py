@@ -1,4 +1,5 @@
 from langchain.chat_models import init_chat_model
+import os
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, ToolMessage, get_buffer_string, filter_messages
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import START, END, StateGraph
@@ -358,6 +359,11 @@ async def final_report_generation(state: AgentState, config: RunnableConfig):
         **cleared_state
     }
 
+# from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+DB_URI = os.getenv("DATABASE_URI")
+checkpointer = AsyncPostgresSaver.from_conn_string(DB_URI)
+
 deep_researcher_builder = StateGraph(AgentState, input=AgentInputState, config_schema=Configuration)
 deep_researcher_builder.add_node("clarify_with_user", clarify_with_user)
 deep_researcher_builder.add_node("write_research_brief", write_research_brief)
@@ -367,45 +373,45 @@ deep_researcher_builder.add_edge(START, "clarify_with_user")
 deep_researcher_builder.add_edge("research_supervisor", "final_report_generation")
 deep_researcher_builder.add_edge("final_report_generation", END)
 
-deep_researcher = deep_researcher_builder.compile()
+deep_researcher = deep_researcher_builder.compile(checkpointer=checkpointer)
 
-# Optional convenience: compile with persistence based on DATABASE_URI
-from contextlib import asynccontextmanager
+# # Optional convenience: compile with persistence based on DATABASE_URI
+# from contextlib import asynccontextmanager
 
 
-@asynccontextmanager
-async def compile_with_memory(database_uri: str | None = None):
-    """Yield a deep_researcher runnable compiled with a checkpointer.
+# @asynccontextmanager
+# async def compile_with_memory(database_uri: str | None = None):
+#     """Yield a deep_researcher runnable compiled with a checkpointer.
 
-    Uses SQLite for URIs starting with 'sqlite://' or a filesystem path,
-    and Postgres for 'postgres://' or 'postgresql://'. Falls back to
-    in-memory (no persistence) when URI is missing or unsupported.
-    """
-    try:
-        if not database_uri:
-            yield deep_researcher_builder.compile()
-            return
+#     Uses SQLite for URIs starting with 'sqlite://' or a filesystem path,
+#     and Postgres for 'postgres://' or 'postgresql://'. Falls back to
+#     in-memory (no persistence) when URI is missing or unsupported.
+#     """
+#     try:
+#         if not database_uri:
+#             yield deep_researcher_builder.compile()
+#             return
 
-        uri = database_uri.strip()
-        if uri.startswith("postgresql") or uri.startswith("postgres"):
-            from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+#         uri = database_uri.strip()
+#         if uri.startswith("postgresql") or uri.startswith("postgres"):
+#             from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
-            async with AsyncPostgresSaver.from_conn_string(uri) as saver:
-                yield deep_researcher_builder.compile(checkpointer=saver)
-            return
+#             async with AsyncPostgresSaver.from_conn_string(uri) as saver:
+#                 yield deep_researcher_builder.compile(checkpointer=saver)
+#             return
 
-        # SQLite (async)
-        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+#         # SQLite (async)
+#         from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
-        normalized = uri
-        if uri.startswith("sqlite:///"):
-            normalized = uri.replace("sqlite:///", "", 1)
-        elif uri.startswith("sqlite://"):
-            normalized = uri.replace("sqlite://", "", 1)
+#         normalized = uri
+#         if uri.startswith("sqlite:///"):
+#             normalized = uri.replace("sqlite:///", "", 1)
+#         elif uri.startswith("sqlite://"):
+#             normalized = uri.replace("sqlite://", "", 1)
 
-        async with AsyncSqliteSaver.from_conn_string(normalized) as saver:
-            yield deep_researcher_builder.compile(checkpointer=saver)
-        return
+#         async with AsyncSqliteSaver.from_conn_string(normalized) as saver:
+#             yield deep_researcher_builder.compile(checkpointer=saver)
+#         return
 
-    except Exception:
-        yield deep_researcher_builder.compile()
+#     except Exception:
+#         yield deep_researcher_builder.compile()
