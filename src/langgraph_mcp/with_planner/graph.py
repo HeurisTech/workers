@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import os
 from typing import Literal, Union
 from pydantic import BaseModel, Field
 from langchain_core.messages import BaseMessage, AIMessage, ToolMessage, HumanMessage
@@ -311,6 +312,9 @@ builder.add_conditional_edges(
 )
 builder.add_edge("generate_response", END)
 
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+DB_URI = os.getenv("DATABASE_URI")
+checkpointer = AsyncPostgresSaver.from_conn_string(DB_URI)
 # Compile the graph
-graph = builder.compile()
+graph = builder.compile(checkpointer=checkpointer)
 graph.name = "AssistantGraphWithPlanner"

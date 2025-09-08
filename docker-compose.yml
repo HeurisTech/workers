@@ -1,0 +1,63 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: workers-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:16
+    container_name: workers-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5442:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: workers-api
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    environment:
+      # Tracing / LangSmith
+      LANGSMITH_TRACING: "true"
+      LANGSMITH_ENDPOINT: "https://api.smith.langchain.com"
+      LANGSMITH_API_KEY: ""
+      LANGSMITH_PROJECT: "open-deep-research"
+
+      # Model API Keys
+      OPENAI_API_KEY: ""
+      ANTHROPIC_API_KEY: ""
+      TAVILY_API_KEY: ""
+      E2B_API_KEY: ""
+
+      # Database (container-to-container URI)
+      DATABASE_URI: postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable
+      # LangGraph Platform DB URI (used by the API server)
+      POSTGRES_URI: postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable
+      # Redis (required by langgraph-api server)
+      REDIS_URI: redis://redis:6379/0
+    ports:
+      - "2024:8000"
+
+volumes:
+  pgdata:
+    driver: local
+
