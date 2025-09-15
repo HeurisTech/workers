@@ -22,7 +22,7 @@ class Configuration:
 
     # Phase 1: Base model configuration
     model: str = field(
-        default=os.getenv("MCP_MODEL", "gpt-4o"),
+        default="gpt-4o",
         metadata={"description": "The language model to use (gpt-4o, claude-4, gemini-2.5)"}
     )
 
@@ -39,7 +39,7 @@ class Configuration:
     )
 
     tool_filtering_enabled: bool = field(
-        default=True,
+        default=False,
         metadata={"description": "Whether to enable intelligent tool filtering"}
     )
 
