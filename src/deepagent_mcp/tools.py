@@ -45,14 +45,61 @@ class MCPToolManager:
         try:
             # Load all tools from all servers
             tools = await self.client.get_tools()
-            self._tools_cache = tools
+
+            # Validate and filter tools with invalid schemas that would be rejected by providers (e.g., OpenAI)
+            def _get_schema_dict(t: BaseTool) -> Dict[str, Any]:
+                if not getattr(t, 'args_schema', None):
+                    return {}
+                schema = t.args_schema
+                if hasattr(schema, 'model_json_schema'):
+                    try:
+                        return schema.model_json_schema()
+                    except Exception:
+                        return {}
+                return schema if isinstance(schema, dict) else {}
+
+            def _schema_is_valid_for_llm(schema: Dict[str, Any]) -> bool:
+                # Recursively ensure array types declare 'items'; this is required by OpenAI tools API.
+                if not isinstance(schema, dict):
+                    return True
+                if schema.get("type") == "array" and "items" not in schema:
+                    return False
+                # Recurse into nested structures
+                for key in ("properties", "definitions"):
+                    props = schema.get(key)
+                    if isinstance(props, dict):
+                        for v in props.values():
+                            if not _schema_is_valid_for_llm(v):
+                                return False
+                # Recurse into common fields
+                for key in ("items", "allOf", "anyOf", "oneOf"):
+                    val = schema.get(key)
+                    if isinstance(val, dict):
+                        if not _schema_is_valid_for_llm(val):
+                            return False
+                    elif isinstance(val, list):
+                        for v in val:
+                            if isinstance(v, dict) and not _schema_is_valid_for_llm(v):
+                                return False
+                return True
+
+            valid_tools: List[BaseTool] = []
+            for t in tools:
+                schema_dict = _get_schema_dict(t)
+                if _schema_is_valid_for_llm(schema_dict):
+                    valid_tools.append(t)
+                else:
+                    # Drop invalid tool to prevent provider 400s (e.g., arrays without 'items')
+                    continue
+
+            self._tools_cache = valid_tools
 
             # Convert to our tool info format
             tool_infos = []
             server_status = {}
 
             # Group tools by server (this is a simplified approach)
-            for tool in tools:
+            for tool in self._tools_cache:
                 # Extract server name from tool metadata if available
                 server_name = getattr(tool, 'server_name', 'unknown')
 
@@ -110,10 +157,49 @@ class MCPToolManager:
             List of LangChain tools ready for execution
         """
         if not self._tools_cache:
-            # Try to load tools if not cached
+            # Try to load tools if not cached, then filter invalid ones
             try:
                 if self.client:
-                    self._tools_cache = await self.client.get_tools()
+                    raw_tools = await self.client.get_tools()
+
+                    def _get_schema_dict(t: BaseTool) -> Dict[str, Any]:
+                        if not getattr(t, 'args_schema', None):
+                            return {}
+                        schema = t.args_schema
+                        if hasattr(schema, 'model_json_schema'):
+                            try:
+                                return schema.model_json_schema()
+                            except Exception:
+                                return {}
+                        return schema if isinstance(schema, dict) else {}
+
+                    def _schema_is_valid_for_llm(schema: Dict[str, Any]) -> bool:
+                        if not isinstance(schema, dict):
+                            return True
+                        if schema.get("type") == "array" and "items" not in schema:
+                            return False
+                        for key in ("properties", "definitions"):
+                            props = schema.get(key)
+                            if isinstance(props, dict):
+                                for v in props.values():
+                                    if not _schema_is_valid_for_llm(v):
+                                        return False
+                        for key in ("items", "allOf", "anyOf", "oneOf"):
+                            val = schema.get(key)
+                            if isinstance(val, dict):
+                                if not _schema_is_valid_for_llm(val):
+                                    return False
+                            elif isinstance(val, list):
+                                for v in val:
+                                    if isinstance(v, dict) and not _schema_is_valid_for_llm(v):
+                                        return False
+                        return True
+
+                    filtered: List[BaseTool] = []
+                    for t in raw_tools:
+                        if _schema_is_valid_for_llm(_get_schema_dict(t)):
+                            filtered.append(t)
+                    self._tools_cache = filtered
             except Exception:
                 return []
 

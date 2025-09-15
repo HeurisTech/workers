@@ -181,6 +181,19 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
         max_tools = None if not cfg.tool_filtering_enabled else cfg.max_tools_per_step
         mcp_tools = await tool_manager.get_tools_for_execution(state, max_tools)
 
+    # If only one MCP server is configured, scope tools to that server by name prefix convention.
+    # This avoids binding unrelated tools that may have incompatible schemas.
+    try:
+        if isinstance(cfg.mcp_server_config, dict) and len(cfg.mcp_server_config) == 1 and mcp_tools:
+            only_server = next(iter(cfg.mcp_server_config.keys()))
+            prefix = f"{only_server.upper()}_"
+            scoped = [t for t in mcp_tools if getattr(t, 'name', '').upper().startswith(prefix)]
+            if scoped:
+                mcp_tools = scoped
+    except Exception:
+        # Best-effort scoping; continue with unfiltered tools on any error
+        pass
+
     logger.info(f"Executing with {len(mcp_tools)} available MCP tools")
 
     # Get built-in tools (from deepagents)
