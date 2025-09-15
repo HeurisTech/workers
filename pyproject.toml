@@ -28,6 +28,7 @@ dependencies = [
     "langchain-community>=0.3.9",
     "langchain-anthropic>=0.3.15",
     "langchain-deepseek>=0.1.2",
+    "langchain-google-genai",
     "langchain-tavily",
     "langchain-groq>=0.2.4",
     "tavily-python>=0.5.0",
@@ -58,6 +59,7 @@ dependencies = [
     "langgraph-checkpoint-postgres>=2.0.23",
     "langgraph-checkpoint-sqlite>=2.0.11",
     "msgpack>=1.1.1",
+    "deepagents",
 ]
 
 [project.optional-dependencies]
@@ -69,10 +71,11 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["langgraph_mcp", "agent", "open_deep_research"]
+packages = ["langgraph_mcp", "agent", "open_deep_research", "deepagent_mcp"]
 
 [tool.setuptools.package-dir]
 "langgraph_mcp" = "src/langgraph_mcp"
 "agent" = "src/agent"
 "open_deep_research" = "src/open_deep_research"
+"deepagent_mcp" = "src/deepagent_mcp"
 
