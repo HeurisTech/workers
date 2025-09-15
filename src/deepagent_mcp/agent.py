@@ -108,13 +108,26 @@ async def plan_and_filter_tools(state: MCPOrchestratorState, *, config: Runnable
     available_tools = state.get('available_tools', []) if isinstance(state, dict) else getattr(state, 'available_tools', [])
     messages = state.get('messages', []) if isinstance(state, dict) else getattr(state, 'messages', [])
     
-    if not cfg.enable_advanced_filtering or not available_tools:
-        # No filtering needed or no tools available
-        return {"filtered_tools": available_tools, "execution_plan": []}
+    # Check if filtering is needed
+    should_filter = (
+        cfg.enable_advanced_filtering and 
+        available_tools and 
+        len(available_tools) > cfg.max_tools_before_filtering
+    )
+    
+    if not should_filter:
+        # Use basic filtering or no filtering
+        basic_filtered = available_tools[:cfg.max_tools_per_step] if len(available_tools) > cfg.max_tools_per_step else available_tools
+        return {
+            "filtered_tools": basic_filtered, 
+            "execution_plan": ["Execute user request with available tools"],
+            "filtering_strategy": "basic" if basic_filtered != available_tools else "none"
+        }
 
     user_message = messages[-1].content if messages else ""
+    logger.info(f"Advanced filtering needed: {len(available_tools)} tools -> target: {cfg.max_tools_per_step}")
 
-    # Initialize intelligent tool filter  
+    # Initialize intelligent tool filter with configuration
     tool_filter = IntelligentToolFilter(cfg.max_tools_per_step)
 
     # Create execution plan and filter tools
@@ -175,11 +188,15 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
     # Get tools for execution 
     if cfg.tool_filtering_enabled and len(tools_to_use) > cfg.max_tools_per_step:
         # Use filtered tools
+        logger.info(f"Using filtered tools: {len(tools_to_use)} tool infos")
         mcp_tools = await tool_manager.get_tools_for_filtered_execution(tools_to_use)
+        logger.info(f"Retrieved {len(mcp_tools)} actual tool objects for filtered execution")
     else:
         # Use all available tools (Phase 1 behavior)
         max_tools = None if not cfg.tool_filtering_enabled else cfg.max_tools_per_step
+        logger.info(f"Using all available tools (max: {max_tools})")
         mcp_tools = await tool_manager.get_tools_for_execution(state, max_tools)
+        logger.info(f"Retrieved {len(mcp_tools)} tool objects for execution")
 
     # If only one MCP server is configured, scope tools to that server by name prefix convention.
     # This avoids binding unrelated tools that may have incompatible schemas.
@@ -195,6 +212,19 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
         pass
 
     logger.info(f"Executing with {len(mcp_tools)} available MCP tools")
+    
+    # Check if we have tools available
+    if not mcp_tools and len(tools_to_use) > 0:
+        logger.warning(f"Expected {len(tools_to_use)} tools but got 0. This may indicate a tool loading issue in LangGraph Platform.")
+        
+        # Try to reload tools directly as a fallback
+        try:
+            if tool_manager.client:
+                fallback_tools = await tool_manager.client.get_tools()
+                logger.info(f"Fallback: loaded {len(fallback_tools)} tools directly from client")
+                mcp_tools = fallback_tools[:cfg.max_tools_per_step] if fallback_tools else []
+        except Exception as e:
+            logger.error(f"Fallback tool loading failed: {e}")
 
     # Get built-in tools (from deepagents)
     built_in_tools = [write_todos, write_file, read_file, edit_file, ls]

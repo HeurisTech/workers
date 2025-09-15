@@ -34,13 +34,34 @@ class Configuration:
 
     # Phase 1: Tool filtering
     max_tools_per_step: int = field(
-        default=10,
+        default=15,
         metadata={"description": "Maximum tools to load per execution step"}
     )
 
     tool_filtering_enabled: bool = field(
         default=True,
         metadata={"description": "Whether to enable intelligent tool filtering"}
+    )
+
+    # Phase 3: Advanced filtering controls
+    max_tools_before_filtering: int = field(
+        default=50,
+        metadata={"description": "Maximum tools before advanced filtering kicks in"}
+    )
+
+    relevance_threshold: float = field(
+        default=0.3,
+        metadata={"description": "Minimum relevance score for tool inclusion (0.0-1.0)"}
+    )
+
+    enable_semantic_filtering: bool = field(
+        default=True,
+        metadata={"description": "Enable semantic similarity filtering"}
+    )
+
+    enable_keyword_prefiltering: bool = field(
+        default=True,
+        metadata={"description": "Enable fast keyword-based pre-filtering"}
     )
 
     # Phase 1: Execution settings
@@ -55,9 +76,9 @@ class Configuration:
         metadata={"description": "Custom system prompt to prepend to base instructions"}
     )
 
-    # Phase 3 NEW: Tool filtering and human-in-loop
+    # Phase 3 NEW: Tool filtering and human-in-loop  
     enable_advanced_filtering: bool = field(
-        default=False,
+        default=True,  # Enable by default now
         metadata={"description": "Enable Phase 3 advanced tool filtering with planning"}
     )
 

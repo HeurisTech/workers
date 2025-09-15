@@ -9,7 +9,6 @@ from typing import Dict, List, Any, Optional
 from langchain_core.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from deepagent_mcp.state import MCPOrchestratorState, MCPToolInfo, MCPServerStatus
-from deepagent_mcp.utils import setup_logging, analyze_with_llm
 
 
 class MCPToolManager:
@@ -25,6 +24,75 @@ class MCPToolManager:
         self.client = MultiServerMCPClient(server_configs) if server_configs else None
         self._tools_cache: List[BaseTool] = []
         self._tool_info_cache: List[MCPToolInfo] = []
+
+    async def _ensure_tools_loaded(self) -> None:
+        """Ensure tools are loaded in cache. Used for LangGraph Platform compatibility."""
+        if self._tools_cache or not self.client:
+            return
+            
+        try:
+            raw_tools = await self.client.get_tools()
+            
+            # Apply schema validation
+            def _get_schema_dict(t: BaseTool) -> Dict[str, Any]:
+                if not getattr(t, 'args_schema', None):
+                    return {}
+                schema = t.args_schema
+                if hasattr(schema, 'model_json_schema'):
+                    try:
+                        return schema.model_json_schema()
+                    except Exception:
+                        return {}
+                return schema if isinstance(schema, dict) else {}
+
+            def _schema_is_valid_for_llm(schema: Dict[str, Any]) -> bool:
+                if not isinstance(schema, dict):
+                    return True
+                if schema.get("type") == "array" and "items" not in schema:
+                    return False
+                for key in ("properties", "definitions"):
+                    props = schema.get(key)
+                    if isinstance(props, dict):
+                        for v in props.values():
+                            if not _schema_is_valid_for_llm(v):
+                                return False
+                for key in ("items", "allOf", "anyOf", "oneOf"):
+                    val = schema.get(key)
+                    if isinstance(val, dict):
+                        if not _schema_is_valid_for_llm(val):
+                            return False
+                    elif isinstance(val, list):
+                        for v in val:
+                            if isinstance(v, dict) and not _schema_is_valid_for_llm(v):
+                                return False
+                return True
+
+            # Filter valid tools
+            valid_tools = []
+            invalid_count = 0
+            for t in raw_tools:
+                try:
+                    schema_dict = _get_schema_dict(t)
+                    if _schema_is_valid_for_llm(schema_dict):
+                        valid_tools.append(t)
+                    else:
+                        invalid_count += 1
+                except Exception:
+                    invalid_count += 1
+            
+            self._tools_cache = valid_tools
+            
+            # Log tool loading results for debugging
+            from deepagent_mcp.utils import setup_logging
+            logger = setup_logging(True)  # Enable debug for tool loading issues
+            logger.info(f"Tool cache loaded: {len(valid_tools)} valid tools, {invalid_count} invalid/failed")
+            
+        except Exception as e:
+            # Log the error for debugging but don't raise
+            from deepagent_mcp.utils import setup_logging
+            logger = setup_logging(True)
+            logger.error(f"Failed to ensure tools loaded: {e}")
+            pass
 
     async def discover_tools(self, state: MCPOrchestratorState) -> Dict[str, Any]:
         """Discover and catalog all available MCP tools.
@@ -156,53 +224,7 @@ class MCPToolManager:
         Returns:
             List of LangChain tools ready for execution
         """
-        if not self._tools_cache:
-            # Try to load tools if not cached, then filter invalid ones
-            try:
-                if self.client:
-                    raw_tools = await self.client.get_tools()
-
-                    def _get_schema_dict(t: BaseTool) -> Dict[str, Any]:
-                        if not getattr(t, 'args_schema', None):
-                            return {}
-                        schema = t.args_schema
-                        if hasattr(schema, 'model_json_schema'):
-                            try:
-                                return schema.model_json_schema()
-                            except Exception:
-                                return {}
-                        return schema if isinstance(schema, dict) else {}
-
-                    def _schema_is_valid_for_llm(schema: Dict[str, Any]) -> bool:
-                        if not isinstance(schema, dict):
-                            return True
-                        if schema.get("type") == "array" and "items" not in schema:
-                            return False
-                        for key in ("properties", "definitions"):
-                            props = schema.get(key)
-                            if isinstance(props, dict):
-                                for v in props.values():
-                                    if not _schema_is_valid_for_llm(v):
-                                        return False
-                        for key in ("items", "allOf", "anyOf", "oneOf"):
-                            val = schema.get(key)
-                            if isinstance(val, dict):
-                                if not _schema_is_valid_for_llm(val):
-                                    return False
-                            elif isinstance(val, list):
-                                for v in val:
-                                    if isinstance(v, dict) and not _schema_is_valid_for_llm(v):
-                                        return False
-                        return True
-
-                    filtered: List[BaseTool] = []
-                    for t in raw_tools:
-                        if _schema_is_valid_for_llm(_get_schema_dict(t)):
-                            filtered.append(t)
-                    self._tools_cache = filtered
-            except Exception:
-                return []
-
+        await self._ensure_tools_loaded()
         tools = self._tools_cache.copy()
 
         # Apply max_tools limit if specified
@@ -222,9 +244,8 @@ class MCPToolManager:
         Returns:
             List of corresponding BaseTool objects
         """
-        if not self._tools_cache:
-            return []
-
+        await self._ensure_tools_loaded()
+        
         filtered_names = {tool_info.name for tool_info in filtered_tool_infos}
         filtered_tools = [tool for tool in self._tools_cache if tool.name in filtered_names]
 
@@ -254,12 +275,35 @@ class IntelligentToolFilter:
 
     def __init__(self, max_tools_per_step: int = 10):
         self.max_tools_per_step = max_tools_per_step
+        
+        # Define tool categories for better filtering
+        self.tool_categories = {
+            "email": ["gmail", "mail", "email", "message", "send", "inbox", "draft"],
+            "calendar": ["calendar", "event", "schedule", "meeting", "appointment"],
+            "files": ["drive", "file", "document", "folder", "upload", "download"],
+            "communication": ["slack", "teams", "chat", "notify", "sms", "call"],
+            "database": ["db", "sql", "query", "table", "record", "data"],
+            "web": ["http", "api", "request", "fetch", "scrape", "url"],
+            "analytics": ["analyze", "report", "chart", "metric", "dashboard"],
+            "automation": ["workflow", "trigger", "action", "webhook", "integration"],
+            "ai": ["gpt", "ai", "llm", "generate", "analyze", "summarize"],
+            "social": ["twitter", "linkedin", "facebook", "social", "post", "share"]
+        }
+        
+        # Define operation types
+        self.operation_types = {
+            "read": ["get", "fetch", "list", "search", "find", "retrieve", "read"],
+            "write": ["create", "send", "post", "add", "insert", "write", "upload"],
+            "update": ["update", "edit", "modify", "change", "patch", "set"],
+            "delete": ["delete", "remove", "trash", "clear", "clean"],
+            "analyze": ["analyze", "process", "calculate", "compute", "evaluate"]
+        }
 
     async def create_plan_and_filter_tools(self, 
                                          user_request: str,
                                          available_tools: List[MCPToolInfo],
                                          model: str) -> Dict[str, Any]:
-        """Main filtering pipeline with planning.
+        """Main filtering pipeline with multi-stage intelligent filtering.
 
         Args:
             user_request: User's request to fulfill
@@ -274,21 +318,35 @@ class IntelligentToolFilter:
             return {
                 "execution_steps": ["Execute user request with available tools"],
                 "filtered_tools": available_tools,
-                "planned_operations": ["general"]
+                "planned_operations": ["general"],
+                "filtering_strategy": "none_needed"
             }
 
         try:
-            # Stage 1: Score relevance, filter out irrelevant tools
-            relevance_scores = await self._analyze_tool_relevance(user_request, available_tools, model)
+            # Stage 1: Fast keyword-based pre-filtering (reduces load for LLM)
+            pre_filtered_tools = await self._pre_filter_by_keywords(user_request, available_tools)
+            
+            # Stage 2: Semantic similarity filtering
+            semantically_filtered = await self._filter_by_semantic_similarity(
+                user_request, pre_filtered_tools, model
+            )
+            
+            # Stage 3: LLM-based relevance scoring (only for remaining tools)
+            relevance_scores = await self._analyze_tool_relevance(
+                user_request, semantically_filtered, model
+            )
+            
+            # Stage 4: Filter by relevance threshold (adaptive based on tool count)
+            threshold = self._calculate_relevance_threshold(len(semantically_filtered))
             relevant_tools = [
-                tool for tool in available_tools 
-                if relevance_scores.get(tool.name, 0) >= 0.1
+                tool for tool in semantically_filtered 
+                if relevance_scores.get(tool.name, 0) >= threshold
             ]
 
-            # Stage 2: Create execution plan
+            # Stage 5: Create execution plan with filtered tools
             execution_plan = await self._create_execution_plan(user_request, relevant_tools, model)
 
-            # Stage 3: Select top tools based on plan and relevance
+            # Stage 6: Final tool selection based on plan and scores
             final_tools = await self._select_final_tools(
                 execution_plan, relevant_tools, relevance_scores
             )
@@ -297,49 +355,242 @@ class IntelligentToolFilter:
                 "execution_steps": execution_plan.get("steps", []),
                 "filtered_tools": final_tools,
                 "planned_operations": execution_plan.get("operations", []),
-                "tool_count_reduced": len(available_tools) - len(final_tools)
+                "tool_count_reduced": len(available_tools) - len(final_tools),
+                "filtering_strategy": "multi_stage",
+                "filtering_stats": {
+                    "original_count": len(available_tools),
+                    "after_keywords": len(pre_filtered_tools),
+                    "after_semantic": len(semantically_filtered), 
+                    "after_relevance": len(relevant_tools),
+                    "final_count": len(final_tools),
+                    "relevance_threshold": threshold
+                }
             }
 
         except Exception as e:
-            # Fallback to simple filtering
+            # Multi-level fallback strategy
+            fallback_tools = await self._fallback_filter(user_request, available_tools)
             return {
-                "execution_steps": ["Execute user request (filtering failed)"],
-                "filtered_tools": available_tools[:self.max_tools_per_step],
+                "execution_steps": ["Execute user request (using fallback filtering)"],
+                "filtered_tools": fallback_tools,
                 "planned_operations": ["general"],
-                "filtering_error": str(e)
+                "filtering_error": str(e),
+                "filtering_strategy": "fallback"
             }
+
+    async def _pre_filter_by_keywords(self,
+                                    user_request: str,
+                                    available_tools: List[MCPToolInfo]) -> List[MCPToolInfo]:
+        """Stage 1: Fast keyword-based pre-filtering to reduce tool set."""
+        request_lower = user_request.lower()
+        
+        # Extract key intent categories from request
+        detected_categories = []
+        for category, keywords in self.tool_categories.items():
+            if any(keyword in request_lower for keyword in keywords):
+                detected_categories.append(category)
+        
+        # Extract operation types 
+        detected_operations = []
+        for operation, keywords in self.operation_types.items():
+            if any(keyword in request_lower for keyword in keywords):
+                detected_operations.append(operation)
+        
+        # If no categories detected, return top tools by name similarity
+        if not detected_categories:
+            return self._filter_by_name_similarity(request_lower, available_tools)
+        
+        # Filter tools by detected categories
+        filtered_tools = []
+        for tool in available_tools:
+            tool_name_desc = f"{tool.name.lower()} {tool.description.lower()}"
+            
+            # Check if tool matches detected categories
+            category_match = False
+            for category in detected_categories:
+                if any(keyword in tool_name_desc for keyword in self.tool_categories[category]):
+                    category_match = True
+                    break
+            
+            # Check if tool matches detected operations
+            operation_match = False
+            if detected_operations:
+                for operation in detected_operations:
+                    if any(keyword in tool_name_desc for keyword in self.operation_types[operation]):
+                        operation_match = True
+                        break
+            else:
+                operation_match = True  # No specific operation required
+            
+            if category_match and operation_match:
+                filtered_tools.append(tool)
+        
+        # If still too many tools, take top by relevance heuristics
+        if len(filtered_tools) > self.max_tools_per_step * 3:  # 3x buffer for next stage
+            filtered_tools = self._rank_by_heuristics(request_lower, filtered_tools)
+            filtered_tools = filtered_tools[:self.max_tools_per_step * 3]
+        
+        return filtered_tools if filtered_tools else available_tools[:self.max_tools_per_step * 2]
+
+    def _filter_by_name_similarity(self, request_lower: str, tools: List[MCPToolInfo]) -> List[MCPToolInfo]:
+        """Fallback: filter by name/description similarity when no categories detected."""
+        request_words = set(request_lower.split())
+        
+        scored_tools = []
+        for tool in tools:
+            tool_words = set(f"{tool.name.lower()} {tool.description.lower()}".split())
+            # Simple word overlap scoring
+            overlap = len(request_words.intersection(tool_words))
+            if overlap > 0:
+                scored_tools.append((tool, overlap))
+        
+        # Sort by overlap score and return top candidates
+        scored_tools.sort(key=lambda x: x[1], reverse=True)
+        return [tool for tool, _ in scored_tools[:self.max_tools_per_step * 2]]
+
+    def _rank_by_heuristics(self, request_lower: str, tools: List[MCPToolInfo]) -> List[MCPToolInfo]:
+        """Rank tools using simple heuristics for better filtering."""
+        scored_tools = []
+        
+        for tool in tools:
+            score = 0
+            tool_name_desc = f"{tool.name.lower()} {tool.description.lower()}"
+            
+            # Exact name matches get highest score
+            if any(word in tool.name.lower() for word in request_lower.split()):
+                score += 10
+            
+            # Description matches get medium score
+            if any(word in tool.description.lower() for word in request_lower.split()):
+                score += 5
+                
+            # Prefer shorter, more specific tool names
+            score += max(0, 20 - len(tool.name))
+            
+            scored_tools.append((tool, score))
+        
+        scored_tools.sort(key=lambda x: x[1], reverse=True)
+        return [tool for tool, _ in scored_tools]
+
+    async def _filter_by_semantic_similarity(self,
+                                           user_request: str,
+                                           tools: List[MCPToolInfo],
+                                           model: str) -> List[MCPToolInfo]:
+        """Stage 2: Semantic similarity filtering using lightweight LLM call."""
+        if len(tools) <= self.max_tools_per_step * 2:
+            return tools
+        
+        # Create a simplified prompt for fast semantic filtering
+        tools_summary = []
+        for i, tool in enumerate(tools):
+            tools_summary.append(f"{i}: {tool.name} - {tool.description[:100]}...")
+        
+        prompt = f"""User Request: {user_request}
+
+Tools (numbered list):
+{chr(10).join(tools_summary)}
+
+Return ONLY the numbers (comma-separated) of the most relevant tools for this request.
+Focus on tools that directly help accomplish the user's goal.
+Maximum {self.max_tools_per_step * 2} tools.
+
+Example response: 1,5,12,18"""
+
+        try:
+            from deepagent_mcp.utils import analyze_with_llm
+            response = await analyze_with_llm(prompt, model)
+            
+            # Parse the response to get tool indices
+            if isinstance(response, str):
+                # Extract numbers from response
+                import re
+                numbers = re.findall(r'\d+', response.strip())
+                selected_indices = [int(n) for n in numbers if int(n) < len(tools)]
+                
+                if selected_indices:
+                    return [tools[i] for i in selected_indices[:self.max_tools_per_step * 2]]
+        
+        except Exception:
+            pass
+        
+        # Fallback: return first portion of tools
+        return tools[:self.max_tools_per_step * 2]
+
+    def _calculate_relevance_threshold(self, tool_count: int) -> float:
+        """Calculate adaptive relevance threshold based on tool count."""
+        if tool_count <= self.max_tools_per_step:
+            return 0.1  # Very permissive
+        elif tool_count <= self.max_tools_per_step * 2:
+            return 0.3  # Moderate
+        elif tool_count <= self.max_tools_per_step * 4:
+            return 0.5  # Stricter
+        else:
+            return 0.7  # Very strict
+
+    async def _fallback_filter(self,
+                             user_request: str,
+                             available_tools: List[MCPToolInfo]) -> List[MCPToolInfo]:
+        """Multi-level fallback when main filtering fails."""
+        try:
+            # Try keyword-based filtering
+            filtered = await self._pre_filter_by_keywords(user_request, available_tools)
+            if len(filtered) <= self.max_tools_per_step:
+                return filtered
+            
+            # If still too many, use heuristic ranking
+            request_lower = user_request.lower()
+            ranked = self._rank_by_heuristics(request_lower, filtered)
+            return ranked[:self.max_tools_per_step]
+            
+        except Exception:
+            # Ultimate fallback: return first N tools
+            return available_tools[:self.max_tools_per_step]
 
     async def _analyze_tool_relevance(self, 
                                     user_request: str,
                                     available_tools: List[MCPToolInfo],
                                     model: str) -> Dict[str, float]:
-        """Stage 1: Analyze tool relevance using LLM."""
+        """Stage 3: Analyze tool relevance using LLM with enhanced prompt."""
+        # Limit tools to prevent context overflow
+        tools_to_analyze = available_tools[:50]  # Reasonable limit for LLM analysis
+        
         tools_info = []
-        for tool in available_tools:
+        for tool in tools_to_analyze:
             tools_info.append({
                 "name": tool.name,
-                "description": tool.description,
+                "description": tool.description[:200],  # Truncate long descriptions
                 "server": tool.server_name
             })
 
-        analysis_prompt = f"""User Request: {user_request}
+        analysis_prompt = f"""User Request: "{user_request}"
 
-Available Tools: {json.dumps(tools_info, indent=2)}
+Available Tools ({len(tools_info)} tools):
+{json.dumps(tools_info, indent=2)}
 
-Rate each tool's relevance (0.0-1.0) for this specific request.
+Rate each tool's relevance (0.0-1.0) for this SPECIFIC request:
+
+Scoring Guidelines:
+- 0.9-1.0: Essential/Primary tools directly needed for the task
+- 0.7-0.8: Important supporting tools
+- 0.5-0.6: Potentially useful but not critical
+- 0.3-0.4: Tangentially related
+- 0.0-0.2: Not relevant
+
 Consider:
-- Does it directly help accomplish the user's goal?
-- Is it the best tool for this task?
-- Would the request be harder without it?
+1. Does the tool directly accomplish the user's primary goal?
+2. Is this tool necessary for the specific action requested?
+3. Would completing this request be impossible/much harder without this tool?
+4. Does the tool name/description match the request intent?
 
-Return JSON mapping tool names to relevance scores (0.0-1.0).
-Example: {{"tool1": 0.8, "tool2": 0.2, "tool3": 0.9}}"""
+Return ONLY valid JSON mapping tool names to scores (0.0-1.0):
+{{"TOOL_NAME_1": 0.85, "TOOL_NAME_2": 0.12, "TOOL_NAME_3": 0.93}}"""
 
         try:
+            from deepagent_mcp.utils import analyze_with_llm
             response = await analyze_with_llm(analysis_prompt, model)
             # Parse JSON response with robust parsing
             if isinstance(response, str):
-                from .utils import parse_json_response
+                from deepagent_mcp.utils import parse_json_response
                 parsed_response = parse_json_response(response)
                 relevance_scores = parsed_response if isinstance(parsed_response, dict) else {}
             else:
@@ -388,9 +639,10 @@ Example:
 }}"""
 
         try:
+            from deepagent_mcp.utils import analyze_with_llm
             response = await analyze_with_llm(planning_prompt, model)
             if isinstance(response, str):
-                from .utils import parse_json_response
+                from deepagent_mcp.utils import parse_json_response
                 parsed_response = parse_json_response(response)
                 plan = parsed_response if isinstance(parsed_response, dict) else {"steps": ["Execute user request"], "requires_approval": False}
             else:
