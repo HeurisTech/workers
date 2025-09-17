@@ -105,7 +105,7 @@ class MCPToolManager:
         """
         if not self.client:
             return {
-                "last_error": "No MCP servers configured",
+                "last_error": None,  # No error - just no MCP servers configured
                 "mcp_servers": {},
                 "available_tools": []
             }

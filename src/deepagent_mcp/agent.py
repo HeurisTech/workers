@@ -176,27 +176,32 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
     # Recreate tool manager (since objects don't persist well in LangGraph state)
     tool_manager = MCPToolManager(cfg.mcp_server_config)
 
-    if not tool_manager.client:
-        return {"last_error": "No MCP servers configured"}
+    # Initialize empty MCP tools list if no servers configured
+    mcp_tools = []
 
     # Determine which tools to use - handle both dict and object state
+    tools_to_use = []
     if isinstance(state, dict):
         tools_to_use = state.get('filtered_tools', []) if state.get('filtered_tools') else state.get('available_tools', [])
     else:
         tools_to_use = state.filtered_tools if hasattr(state, 'filtered_tools') and state.filtered_tools else state.available_tools
 
-    # Get tools for execution 
-    if cfg.tool_filtering_enabled and len(tools_to_use) > cfg.max_tools_per_step:
-        # Use filtered tools
-        logger.info(f"Using filtered tools: {len(tools_to_use)} tool infos")
-        mcp_tools = await tool_manager.get_tools_for_filtered_execution(tools_to_use)
-        logger.info(f"Retrieved {len(mcp_tools)} actual tool objects for filtered execution")
+    # Only try to load MCP tools if we have a client configured
+    if tool_manager.client:
+        # Get tools for execution
+        if cfg.tool_filtering_enabled and len(tools_to_use) > cfg.max_tools_per_step:
+            # Use filtered tools
+            logger.info(f"Using filtered tools: {len(tools_to_use)} tool infos")
+            mcp_tools = await tool_manager.get_tools_for_filtered_execution(tools_to_use)
+            logger.info(f"Retrieved {len(mcp_tools)} actual tool objects for filtered execution")
+        else:
+            # Use all available tools (Phase 1 behavior)
+            max_tools = None if not cfg.tool_filtering_enabled else cfg.max_tools_per_step
+            logger.info(f"Using all available tools (max: {max_tools})")
+            mcp_tools = await tool_manager.get_tools_for_execution(state, max_tools)
+            logger.info(f"Retrieved {len(mcp_tools)} tool objects for execution")
     else:
-        # Use all available tools (Phase 1 behavior)
-        max_tools = None if not cfg.tool_filtering_enabled else cfg.max_tools_per_step
-        logger.info(f"Using all available tools (max: {max_tools})")
-        mcp_tools = await tool_manager.get_tools_for_execution(state, max_tools)
-        logger.info(f"Retrieved {len(mcp_tools)} tool objects for execution")
+        logger.info("No MCP servers configured, proceeding with built-in tools only")
 
     # If only one MCP server is configured, scope tools to that server by name prefix convention.
     # This avoids binding unrelated tools that may have incompatible schemas.
@@ -212,11 +217,11 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
         pass
 
     logger.info(f"Executing with {len(mcp_tools)} available MCP tools")
-    
-    # Check if we have tools available
-    if not mcp_tools and len(tools_to_use) > 0:
+
+    # Check if we have tools available (only warn if we have an MCP client but no tools)
+    if tool_manager.client and not mcp_tools and len(tools_to_use) > 0:
         logger.warning(f"Expected {len(tools_to_use)} tools but got 0. This may indicate a tool loading issue in LangGraph Platform.")
-        
+
         # Try to reload tools directly as a fallback
         try:
             if tool_manager.client:
