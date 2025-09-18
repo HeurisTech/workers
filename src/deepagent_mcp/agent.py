@@ -189,14 +189,14 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
     # Only try to load MCP tools if we have a client configured
     if tool_manager.client:
         # Get tools for execution
-        if cfg.tool_filtering_enabled and len(tools_to_use) > cfg.max_tools_per_step:
+        if cfg.enable_advanced_filtering and len(tools_to_use) > cfg.max_tools_per_step:
             # Use filtered tools
             logger.info(f"Using filtered tools: {len(tools_to_use)} tool infos")
             mcp_tools = await tool_manager.get_tools_for_filtered_execution(tools_to_use)
             logger.info(f"Retrieved {len(mcp_tools)} actual tool objects for filtered execution")
         else:
             # Use all available tools (Phase 1 behavior)
-            max_tools = None if not cfg.tool_filtering_enabled else cfg.max_tools_per_step
+            max_tools = None if not cfg.enable_advanced_filtering else cfg.max_tools_per_step
             logger.info(f"Using all available tools (max: {max_tools})")
             mcp_tools = await tool_manager.get_tools_for_execution(state, max_tools)
             logger.info(f"Retrieved {len(mcp_tools)} tool objects for execution")
