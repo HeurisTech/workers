@@ -354,7 +354,10 @@ async def create_mcp_orchestrator(config: Union[Configuration, Dict[str, Any]]) 
 
         # Compile with interrupt support - interrupt before execute if needed
         interrupt_before = ["execute"] if config.interrupt_before_execution else []
-        return builder.compile(interrupt_before=interrupt_before)
+        from langgraph.checkpoint.postgres import PostgresSaver
+        DB_URI = os.getenv("DATABASE_URI")
+        checkpointer = PostgresSaver.from_conn_string(DB_URI)
+        return builder.compile(interrupt_before=interrupt_before, checkpointer=checkpointer)
 
     else:
         # Phase 1 & 2: Simple workflow (existing implementation)
@@ -369,7 +372,10 @@ async def create_mcp_orchestrator(config: Union[Configuration, Dict[str, Any]]) 
         builder.add_edge("execute", "__end__")
 
         # Compile and return
-        return builder.compile()
+        from langgraph.checkpoint.postgres import PostgresSaver
+        DB_URI = os.getenv("DATABASE_URI")
+        checkpointer = PostgresSaver.from_conn_string(DB_URI)
+        return builder.compile(checkpointer=checkpointer)
 
 
 # Export the main creation function
