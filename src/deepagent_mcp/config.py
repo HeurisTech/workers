@@ -34,7 +34,7 @@ class Configuration:
 
     # Phase 1: Tool filtering
     max_tools_per_step: int = field(
-        default=15,
+        default=30,
         metadata={"description": "Maximum tools to load per execution step"}
     )
 

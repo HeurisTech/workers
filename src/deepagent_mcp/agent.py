@@ -108,11 +108,12 @@ async def plan_and_filter_tools(state: MCPOrchestratorState, *, config: Runnable
     available_tools = state.get('available_tools', []) if isinstance(state, dict) else getattr(state, 'available_tools', [])
     messages = state.get('messages', []) if isinstance(state, dict) else getattr(state, 'messages', [])
     
-    # Check if filtering is needed
+    # Check if filtering is needed - skip if tool count is less than 40
     should_filter = (
-        cfg.enable_advanced_filtering and 
-        available_tools and 
-        len(available_tools) > cfg.max_tools_before_filtering
+        cfg.enable_advanced_filtering and
+        available_tools and
+        len(available_tools) > cfg.max_tools_before_filtering and
+        len(available_tools) >= 40
     )
     
     if not should_filter:
@@ -188,15 +189,21 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
 
     # Only try to load MCP tools if we have a client configured
     if tool_manager.client:
-        # Get tools for execution
-        if cfg.enable_advanced_filtering and len(tools_to_use) > cfg.max_tools_per_step:
+        # Get tools for execution - skip filtering if tool count is less than 40
+        should_filter_execution = (
+            cfg.enable_advanced_filtering and
+            len(tools_to_use) > cfg.max_tools_per_step and
+            len(tools_to_use) >= 40
+        )
+
+        if should_filter_execution:
             # Use filtered tools
             logger.info(f"Using filtered tools: {len(tools_to_use)} tool infos")
             mcp_tools = await tool_manager.get_tools_for_filtered_execution(tools_to_use)
             logger.info(f"Retrieved {len(mcp_tools)} actual tool objects for filtered execution")
         else:
             # Use all available tools (Phase 1 behavior)
-            max_tools = None if not cfg.enable_advanced_filtering else cfg.max_tools_per_step
+            max_tools = None if not cfg.enable_advanced_filtering or len(tools_to_use) < 40 else cfg.max_tools_per_step
             logger.info(f"Using all available tools (max: {max_tools})")
             mcp_tools = await tool_manager.get_tools_for_execution(state, max_tools)
             logger.info(f"Retrieved {len(mcp_tools)} tool objects for execution")
