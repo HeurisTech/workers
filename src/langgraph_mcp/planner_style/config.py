@@ -72,7 +72,10 @@ class Configuration:
         """Get a list of descriptions of all MCP servers in the specified configuration."""
         descriptions = []
         for server_name, server_config in self.mcp_server_config.items():
-            description = server_config.get('description', '')
+            if server_config is None:
+                description = ''
+            else:
+                description = server_config.get('description', '')
             descriptions.append((server_name, description))
         return descriptions
     
@@ -98,7 +101,17 @@ class Configuration:
         Returns:
             Dict[str, Any]: Server configuration for the specified server or None if not found
         """
-        return self.mcp_server_config.get(server_name, None)
+        # First try exact match
+        if server_name in self.mcp_server_config:
+            return self.mcp_server_config[server_name]
+        
+        # For Composio MCP configs, try matching by mcp_server_name field
+        for config_key, server_config in self.mcp_server_config.items():
+            if server_config is not None and isinstance(server_config, dict):
+                if server_config.get('mcp_server_name') == server_name:
+                    return server_config
+        
+        return None
         
 
 T = TypeVar("T", bound=Configuration)

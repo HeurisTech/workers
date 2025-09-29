@@ -12,9 +12,10 @@
     "RUN playwright install --with-deps chromium"
   ],
   "graphs": {
-    "planner_style_agent": "./src/langgraph_mcp/planner_style/graph.py:graph",
-    "computer_use": "./src/agent/graph.py:workflow_graph",
-    "open_deep_research": "./src/open_deep_research/deep_researcher.py:deep_researcher"
+    "agent": {
+      "path": "./src/deepagent_mcp/agent.py:create_mcp_orchestrator",
+      "description": "Advanced MCP orchestrator agent that implements core orchestration logic using deepagents architecture with MCP tool integration. Provides intelligent tool discovery, planning, and execution capabilities."
+    }
   },
   "env": ".env"
 }
