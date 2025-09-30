@@ -244,8 +244,8 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
 
     # Create system prompt - Phase 2 feature: prepend user system prompt
     instructions = get_system_prompt()
-    if cfg.system_prompt:
-        instructions = f"{cfg.system_prompt}\n\n{instructions}"
+    if cfg.instructions:
+        instructions = f"{cfg.instructions}\n\n{instructions}"
         logger.info("Using custom system prompt from configuration")
 
     # Add execution plan context if available

@@ -1,24 +1,21 @@
 FROM langchain/langgraph-api:3.12
 
-RUN apt-get update && apt-get install -y curl
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs
-RUN npm install -g playwright
-RUN playwright install --with-deps chromium
+
 
 # -- Adding local package . --
 ADD . /deps/workers
 # -- End of local package . --
 
 # -- Installing all local dependencies --
-RUN PYTHONDONTWRITEBYTECODE=1 uv pip install --system --no-cache-dir -c /api/constraints.txt -e /deps/*
+RUN PYTHONDONTWRITEBYTECODE=1 uv pip install --system --prerelease=allow --no-cache-dir -c /api/constraints.txt -e /deps/*
 # -- End of local dependencies install --
-ENV LANGSERVE_GRAPHS='{"assist_with_planner": "/deps/workers/src/langgraph_mcp/with_planner/graph.py:graph", "assist_with_playwright": "/deps/workers/src/langgraph_mcp/playwright_react_graph.py:make_graph", "planner_style_agent": "/deps/workers/src/langgraph_mcp/planner_style/graph.py:graph", "computer_use": "/deps/workers/src/agent/graph.py:workflow_graph", "open_deep_research": "/deps/workers/src/open_deep_research/deep_researcher.py:deep_researcher"}'
+ENV LANGSERVE_GRAPHS='{"agent": {"path": "/deps/workers/src/deepagent_mcp/agent.py:create_mcp_orchestrator", "description": "Advanced MCP orchestrator agent that implements core orchestration logic using deepagents architecture with MCP tool integration. Provides intelligent tool discovery, planning, and execution capabilities."}}'
 
 
 
 # -- Ensure user deps didn't inadvertently overwrite langgraph-api
 RUN mkdir -p /api/langgraph_api /api/langgraph_runtime /api/langgraph_license && touch /api/langgraph_api/__init__.py /api/langgraph_runtime/__init__.py /api/langgraph_license/__init__.py
-RUN PYTHONDONTWRITEBYTECODE=1 uv pip install --system --no-cache-dir --no-deps -e /api
+RUN PYTHONDONTWRITEBYTECODE=1 uv pip install --system --prerelease=allow --no-cache-dir --no-deps -e /api
 # -- End of ensuring user deps didn't inadvertently overwrite langgraph-api --
 # -- Removing build deps from the final image ~<:===~~~ --
 RUN pip uninstall -y pip setuptools wheel
