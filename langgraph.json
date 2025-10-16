@@ -9,6 +9,10 @@
     "agent": {
       "path": "./src/deepagent_mcp/agent.py:create_mcp_orchestrator",
       "description": "Advanced MCP orchestrator agent that implements core orchestration logic using deepagents architecture with MCP tool integration. Provides intelligent tool discovery, planning, and execution capabilities."
+    },
+    "simple_agent": {
+      "path": "./src/simple_agent/graph.py:graph",
+      "description": "Workflow Enhancement Agent that transforms simple task descriptions and associated integrations into comprehensive, well-structured workflows. Analyzes tasks, evaluates integrations, and generates detailed step-by-step workflows with error handling and success criteria."
     }
   },
   "env": ".env"
