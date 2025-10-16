@@ -71,11 +71,12 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["langgraph_mcp", "agent", "open_deep_research", "deepagent_mcp"]
+packages = ["langgraph_mcp", "agent", "open_deep_research", "deepagent_mcp", "simple_agent"]
 
 [tool.setuptools.package-dir]
 "langgraph_mcp" = "src/langgraph_mcp"
 "agent" = "src/agent"
 "open_deep_research" = "src/open_deep_research"
 "deepagent_mcp" = "src/deepagent_mcp"
+"simple_agent" = "src/simple_agent"
 

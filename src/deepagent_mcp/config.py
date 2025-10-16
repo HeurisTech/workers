@@ -71,7 +71,7 @@ class Configuration:
     )
 
     # Phase 2 NEW: User system prompt
-    system_prompt: Optional[str] = field(
+    instructions: Optional[str] = field(
         default=None,
         metadata={"description": "Custom system prompt to prepend to base instructions"}
     )
