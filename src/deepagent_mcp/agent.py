@@ -263,7 +263,7 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
     try:
         agent = create_deep_agent(
             tools=all_tools,
-            instructions=instructions,
+            system_prompt=instructions,
             model=model_name
         )
 
