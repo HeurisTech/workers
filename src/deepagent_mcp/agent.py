@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional, Union
 load_dotenv()
 from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import HumanMessage, AIMessage
-from deepagents import async_create_deep_agent
+from deepagents import create_deep_agent
 from deepagents.tools import write_todos, write_file, read_file, edit_file, ls
 
 from deepagent_mcp.config import Configuration
@@ -262,7 +262,7 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
 
     # Create deep agent for execution
     try:
-        agent = async_create_deep_agent(
+        agent = create_deep_agent(
             tools=all_tools,
             instructions=instructions,
             model=model_name
