@@ -9,8 +9,9 @@ T = TypeVar("T", bound="Configuration")
 
 # Supported models for Phase 2
 SUPPORTED_MODELS = {
+    "gpt-5-nano": "openai/gpt-5-nano",
     "gpt-4o": "openai/gpt-4o",
-    "claude-4": "anthropic/claude-3-5-sonnet-20241022", 
+    "claude-4": "anthropic/claude-3-5-sonnet-20241022",
     "gemini-2.5": "google/gemini-2.0-flash-exp",
     "gpt-4o-mini": "openai/gpt-4o-mini",
     # Add more models as needed
@@ -22,8 +23,8 @@ class Configuration:
 
     # Phase 1: Base model configuration
     model: str = field(
-        default="gpt-4o",
-        metadata={"description": "The language model to use (gpt-4o, claude-4, gemini-2.5)"}
+        default="openai/gpt-5-nano",
+        metadata={"description": "The language model to use (openai/gpt-5-nano, openai/gpt-4o, anthropic/claude-3-5-sonnet-20241022, google/gemini-2.0-flash-exp)"}
     )
 
     # MCP server configurations

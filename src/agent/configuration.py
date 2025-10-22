@@ -65,7 +65,7 @@ class AgentConfig:
         metadata={"description": "LLM provider for the brain node. Options: 'openai' or 'anthropic'."},
     )
     brain_model: str = field(
-        default=os.getenv("CUA_BRAIN_MODEL", "gpt-4o"),
+        default=os.getenv("CUA_BRAIN_MODEL", "gpt-5-nano"),
         metadata={"description": "Model name for the brain node."},
     )
 

@@ -620,7 +620,7 @@ async def vision_executor(state: ExecutionState, *, config: RunnableConfig) -> E
                         # Call OpenAI Computer Use model
                         response = await take_action(
                             messages=messages,
-                            model="gpt-4o",  # Use vision-capable model
+                            model="gpt-5-nano",  # Use vision-capable model
                             api_key=cfg.openai_api_key,
                             environment=map_platform_to_environment(state.application_platform or "google-chrome")
                         )
