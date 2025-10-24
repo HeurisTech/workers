@@ -12,8 +12,7 @@ from typing import Dict, Any, List, Optional, Union
 load_dotenv()
 from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import HumanMessage, AIMessage
-from deepagents import async_create_deep_agent
-from deepagents.tools import write_todos, write_file, read_file, edit_file, ls
+from deepagents import create_deep_agent
 
 from deepagent_mcp.config import Configuration
 from deepagent_mcp.state import MCPOrchestratorState, MCPToolInfo
@@ -238,9 +237,9 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
         except Exception as e:
             logger.error(f"Fallback tool loading failed: {e}")
 
-    # Get built-in tools (from deepagents)
-    built_in_tools = [write_todos, write_file, read_file, edit_file, ls]
-    all_tools = built_in_tools + mcp_tools
+    # Built-in tools are automatically included by create_deep_agent
+    # No need to explicitly pass them
+    all_tools = mcp_tools
 
     # Create system prompt - Phase 2 feature: prepend user system prompt
     instructions = get_system_prompt()
@@ -262,9 +261,9 @@ async def execute_with_mcp_tools(state: MCPOrchestratorState, *, config: Runnabl
 
     # Create deep agent for execution
     try:
-        agent = async_create_deep_agent(
+        agent = create_deep_agent(
             tools=all_tools,
-            instructions=instructions,
+            system_prompt=instructions,
             model=model_name
         )
 

@@ -20,7 +20,7 @@ class Configuration:
     )
 
     planner_model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="openai/gpt-4o",
+        default="openai/gpt-5-nano",
         metadata={
             "description": "The language model used for planning. Should be in the form: provider/model-name."
         },
@@ -32,7 +32,7 @@ class Configuration:
     )
 
     execute_task_model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="openai/gpt-4o",
+        default="openai/gpt-5-nano",
         metadata={
             "description": "The language model used for executing a task by an expert. Should be in the form: provider/model-name."
         },
@@ -44,7 +44,7 @@ class Configuration:
     )
 
     generate_response_model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="openai/gpt-4o",
+        default="openai/gpt-5-nano",
         metadata={
             "description": "The language model used for generating final responses. Should be in the form: provider/model-name."
         },

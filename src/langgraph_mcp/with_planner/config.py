@@ -20,7 +20,7 @@ class Configuration:
     )
 
     planner_model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="openai/gpt-4o",
+        default="openai/gpt-5-nano",
         metadata={
             "description": "The language model used for planning. Should be in the form: provider/model-name."
         },
@@ -32,7 +32,7 @@ class Configuration:
     )
 
     orchestrate_model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="openai/gpt-4o",
+        default="openai/gpt-5-nano",
         metadata={
             "description": "The language model used orchestrating across expert tools. Should be in the form: provider/model-name."
         },
@@ -44,7 +44,7 @@ class Configuration:
     )
 
     task_assessment_model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="openai/gpt-4o",
+        default="openai/gpt-5-nano",
         metadata={
             "description": "The language model used for task completion assessment. Should be in the form: provider/model-name."
         },
@@ -56,7 +56,7 @@ class Configuration:
     )
 
     generate_response_model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="openai/gpt-4o",
+        default="openai/gpt-5-nano",
         metadata={
             "description": "The language model used for generating final responses. Should be in the form: provider/model-name."
         },

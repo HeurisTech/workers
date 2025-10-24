@@ -13,8 +13,8 @@ class Configuration:
     """Configuration for the simple agent."""
 
     model: str = field(
-        default="openai/gpt-4o-mini",
-        metadata={"description": "The language model to use (e.g., openai/gpt-4o-mini at $0.15/1M tokens, openai/gpt-3.5-turbo, anthropic/claude-3-5-haiku-20241022)"}
+        default="openai/gpt-5-nano",
+        metadata={"description": "The language model to use (e.g., openai/gpt-5-nano, openai/gpt-4o-mini at $0.15/1M tokens, openai/gpt-3.5-turbo, anthropic/claude-3-5-haiku-20241022)"}
     )
 
     instructions: Optional[str] = field(
